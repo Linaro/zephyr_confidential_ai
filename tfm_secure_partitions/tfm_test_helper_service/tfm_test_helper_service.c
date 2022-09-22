@@ -40,9 +40,8 @@ psa_status_t tfm_test_helper_run(psa_msg_t *msg)
 
 	// Check size of invec/outvec parameter
 	if (msg->in_size[0] != sizeof(tfm_th_test_list_t)) {
-
 		status = PSA_ERROR_PROGRAMMER_ERROR;
-		goto err;
+		return status;
 	}
 
 	psa_read(msg->handle, 0, &test_to_run, msg->in_size[0]);
@@ -58,12 +57,12 @@ psa_status_t tfm_test_helper_run(psa_msg_t *msg)
 					   &encoded_buf_len);
 		if (status != PSA_SUCCESS) {
 			log_err_print("failed with %d", status);
-			goto err;
+			sts = TEST_FAILED;
+		} else {
+			sts = TEST_SUCCEED;
 		}
-		sts = TEST_SUCCEED;
 		break;
 	case TEST_HUK_ENC_COSE_SIGN1:
-		log_info_print("TEST: Starting COSE SIGN");
 		y_value = 0.237216; /* Sample sin(10) */
 		status = psa_huk_cose_sign(&y_value,
 					   HUK_ENC_COSE_SIGN1,
@@ -72,21 +71,62 @@ psa_status_t tfm_test_helper_run(psa_msg_t *msg)
 					   &encoded_buf_len);
 		if (status != PSA_SUCCESS) {
 			log_err_print("failed with %d", status);
-			goto err;
+			sts = TEST_FAILED;
+		} else {
+			sts = TEST_SUCCEED;
 		}
-		sts = TEST_SUCCEED;
 		break;
 	case TEST_HUK_ENC_WRONG_FORMAT:
 		log_info_print("TEST: CBOR encoding wrong format");
+		y_value = 0.237216; /* Sample sin(10) */
+		uint32_t enc_format = 6;
+		status = psa_huk_cose_sign(&y_value,
+					   enc_format,
+					   encoded_buf,
+					   INFER_ENC_MAX_VALUE_SZ,
+					   &encoded_buf_len);
+		if (status == PSA_ERROR_INVALID_ARGUMENT) {
+			sts = TEST_SUCCEED;
+		} else {
+			sts = TEST_FAILED;
+		}
 		break;
-	case TEST_HUK_ENC_BUFFER_UNDERFLOW:
-		log_info_print("TEST: Buffer Underflow");
+	case TEST_HUK_ENC_BUFFER_OVERFLOW:
+		log_info_print("TEST: Buffer overflow");
+		y_value = 0.237216;  /* Sample sin(10) */
+		status = psa_huk_cose_sign(&y_value,
+					   HUK_ENC_COSE_SIGN1,
+					   encoded_buf,
+					   60,
+					   &encoded_buf_len);
+		if (status != PSA_SUCCESS) {
+			sts = TEST_SUCCEED;
+		} else {
+			sts = TEST_FAILED;
+		}
 		break;
 	case TEST_HUK_COSE_VERIFY_SIGN:
-		log_info_print("TEST: VERIFY SIGN");
-		break;
-	case TEST_HUK_VERIFY_COSE_SIGN_FAIL:
-		log_info_print("TEST: COSE Sign failed");
+		log_info_print("TEST: Verify sign");
+		y_value = 0.016944; /* Sample sin(10) */
+		status = psa_huk_cose_sign(&y_value,
+					   HUK_ENC_COSE_SIGN1,
+					   encoded_buf,
+					   INFER_ENC_MAX_VALUE_SZ,
+					   &encoded_buf_len);
+		if (status != PSA_SUCCESS) {
+			log_err_print("failed with %d", status);
+			sts = TEST_FAILED;
+		} else {
+			sts = TEST_SUCCEED;
+			psa_write(msg->handle,
+				  1,
+				  encoded_buf,
+				  encoded_buf_len);
+			psa_write(msg->handle,
+				  2,
+				  &encoded_buf_len,
+				  sizeof(encoded_buf_len));
+		}
 		break;
 	}
 	psa_write(msg->handle,
@@ -94,7 +134,6 @@ psa_status_t tfm_test_helper_run(psa_msg_t *msg)
 		  &sts,
 		  sizeof(test_run_status_t));
 
-err:
 	return status;
 }
 
