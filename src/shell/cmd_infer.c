@@ -63,13 +63,6 @@ cmd_infer_get_sine_val(const struct shell *shell,
 	char *payload_format[3] = { "CBOR", "SIGN1", "ENCRYPT0" };
 	_Bool is_valid_payload_format = false;
 
-#if CONFIG_NONSECURE_COSE_VERIFY_SIGN
-	uint8_t key_ctx_idx = KEY_C_SIGN;
-	uint8_t pubkey[KM_PUBLIC_KEY_SIZE] = { 0 };
-	size_t pubkey_len = sizeof(pubkey);
-
-#endif
-
 	if ((argc == 1) || (strcmp(argv[1], "help") == 0)) {
 		shell_print(shell, "Requests a new sine wave approximation using TFLM.\n");
 		shell_print(shell, "  $ %s %s %s <format> <start> <[stop] [stride]>\n",
@@ -168,31 +161,6 @@ cmd_infer_get_sine_val(const struct shell *shell,
 			shell_hexdump(shell, infval_enc_buf, infval_enc_buf_len);
 		}
 
-#if CONFIG_NONSECURE_COSE_VERIFY_SIGN
-		if (enc_fmt == INFER_ENC_COSE_SIGN1) {
-			status = km_get_pubkey(pubkey, pubkey_len,
-					       key_ctx_idx);
-
-			if (status != 0) {
-				return shell_com_rc_code(shell,
-							 "Failed to get the public key",
-							 status);
-			}
-			status = infer_verify_signature(infval_enc_buf,
-							infval_enc_buf_len,
-							pubkey,
-							pubkey_len,
-							&model_out_val);
-			if (status != 0) {
-				return shell_com_rc_code(shell,
-							 "Failed to verify the signature",
-							 status);
-			} else {
-				shell_print(shell,
-					    "Verified the signature using the public key.");
-			}
-		}
-#else
 		status = infer_get_value(enc_fmt,
 					 infval_enc_buf,
 					 infval_enc_buf_len,
@@ -202,7 +170,6 @@ cmd_infer_get_sine_val(const struct shell *shell,
 						 "Failed to decode COSE payload",
 						 status);
 		}
-#endif
 
 		shell_print(shell, "Model: Sine of %.2f deg is: %f\t",
 			    usr_in_val_start, model_out_val);

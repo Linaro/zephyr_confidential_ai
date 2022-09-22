@@ -49,26 +49,6 @@ typedef struct {
 	char models[32];
 } infer_config_t;
 
-#if CONFIG_NONSECURE_COSE_VERIFY_SIGN
-/**
- * @brief  Verifies the COSE SIGN1 signature of the supplied payload and gets
- * inference value
- *
- * @param infval_enc_buf     Buffer containing the COSE SIGN1 packet to verify.
- * @param infval_enc_buf_len Size of infval_enc_buf.
- * @param pubkey             The EC pubkey to use to verify the signature.
- * @param pubkey_len         Size of pubkey.
- * @param out_val            Inference value.
- *
- * @return psa_status_t
- */
-psa_status_t infer_verify_signature(uint8_t *infval_enc_buf,
-				    size_t infval_enc_buf_len,
-				    uint8_t *pubkey,
-				    size_t pubkey_len,
-				    float *out_val);
-#endif
-
 /**
  * @brief Get the inference value from the supplied CBOR, COSE SIGN1, or COSE
  * ENCRYPT0 payload.
