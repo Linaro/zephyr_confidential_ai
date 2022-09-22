@@ -32,18 +32,33 @@ FILE(GLOB TEST_HELPER_SERVICE_API ../test_service/*.c)
 target_sources(app
     PRIVATE
         ${TESTSUITE_SOURCES}
-        ${TEST_HELPER_SERVICE_API})
+        ${TEST_HELPER_SERVICE_API}
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/src/tfm_partition_huk.c
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/src/key_mgmt.c
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/src/cose/cose_verify.c
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/src/cose/mbedtls_ecdsa_verify_sign.c
+        ${ZEPHY_SECURE_INFER_SRC_PATH}ext/NanoCBOR/src/decoder.c
+        ${ZEPHY_SECURE_INFER_SRC_PATH}ext/NanoCBOR/src/encoder.c
+)
 
 target_include_directories(app
     PRIVATE
         ${ZEPHYR_TRUSTED_FIRMWARE_M_MODULE_DIR}/interface/include
         ${CMAKE_CURRENT_LIST_DIR}/../test_service
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/include
+        ${ZEPHY_SECURE_INFER_SRC_PATH}/ext/NanoCBOR/include
 )
 
 target_compile_definitions(app PRIVATE
   TFM_PARTITION_HUK_KEY_DERIVATION
   TFM_PARTITION_TEST_HELPER_SERVICE
+  NANOCBOR_BYTEORDER_HEADER=<zephyr/sys/byteorder.h>
+  NANOCBOR_BE64TOH_FUNC=sys_be64_to_cpu
+  NANOCBOR_HTOBE64_FUNC=sys_cpu_to_be64
+  NANOCBOR_HTOBE32_FUNC=sys_cpu_to_be32
 )
+
+add_compile_definitions(CONFIG_NONSECURE_COSE_VERIFY_SIGN)
 
 # In TF-M, default value of CRYPTO_ENGINE_BUF_SIZE is 0x2080. It causes
 # insufficient memory failure while verifying signature. Increase it to 0x2400.
