@@ -1,0 +1,7 @@
+common:
+  filter: (CONFIG_TFM_BOARD != "") and CONFIG_ARM_NONSECURE_FIRMWARE
+  tags: arm tfm
+  arch_allow: arm
+tests:
+  tfm_sp.tfm_huk_deriv_srv:
+    platform_allow: mps2_an521_ns

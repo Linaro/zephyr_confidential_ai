@@ -1,0 +1,48 @@
+# Copyright (c) 2022, Linaro
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build
+
+on: [push, pull_request]
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:latest
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: zephyr_secure_inference
+      
+      - name: Initialize
+        working-directory: zephyr_secure_inference
+        run: |
+          pip3 install -U west
+          west init -l .
+          west update
+          pip3 install -r ../zephyr/scripts/requirements-base.txt
+          west zephyr-export
+
+      - name: Apply TFM patch
+        working-directory: zephyr_secure_inference 
+        run: |
+          cd ../modules/tee/tf-m/trusted-firmware-m
+          git apply ../../../../zephyr_secure_inference/patch/tfm.patch
+
+      - name: Build app
+        working-directory: zephyr_secure_inference
+        run: |
+          cp ci_certs/bootstrap_crt.txt src/bootstrap_crt.txt
+          cp ci_certs/bootstrap_key.txt src/bootstrap_key.txt
+          cp ci_certs/ca_crt.txt src/ca_crt.txt
+          west build -p always -b mps2_an521_ns
+
+      - name: Test
+        working-directory: zephyr_secure_inference
+        run: |
+          ../zephyr/scripts/twister --inline-logs -p mps2_an521 -T tests  -v

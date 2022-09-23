@@ -1,0 +1,79 @@
+{
+  "executors": [
+    "aot"
+  ],
+  "export_datetime": "2022-03-24 18:49:45Z",
+  "external_dependencies": [
+    {
+      "short_name": "tvm_standalone_crt",
+      "url": "./runtime",
+      "url_type": "mlf_path",
+      "version_spec": "0.9.dev0"
+    }
+  ],
+  "memory": {
+    "functions": {
+      "main": [
+        {
+          "constants_size_bytes": 0,
+          "device": 1,
+          "io_size_bytes": 8,
+          "workspace_size_bytes": 1184
+        }
+      ],
+      "operator_functions": [
+        {
+          "function_name": "tvmgen_default_fused_reshape_1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_dense_add_nn_relu_1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 1056
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_dense_add_nn_relu",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 96
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_reshape",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_dense_add",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 80
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "model_name": "default",
+  "style": "full-model",
+  "target": {
+    "1": "c -keys=cpu -link-params=0 -mcpu=cortex-m33"
+  },
+  "version": 5
+}

@@ -1,0 +1,16 @@
+# Copyright (c) 2022 Linaro
+# SPDX-License-Identifier: Apache-2.0
+
+manifest:
+  self:
+    path: zephyr_secure_inference
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: 9562e3f794d7e3d4acc305e3a0dd52536a867586
+      import: true

@@ -1,0 +1,34 @@
+#-------------------------------------------------------------------------------
+# Copyright (c) 2022 Linaro Limited
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+#-------------------------------------------------------------------------------
+
+{
+  "psa_framework_version": 1.0,
+  "name": "TFM_SP_TEST_HELPER_SERVICE",
+  "type": "APPLICATION-ROT",
+  "priority": "NORMAL",
+  "entry_point": "tfm_test_helper_service_req_mngr_init",
+  "stack_size": "0x1000",
+  "services": [
+    {
+      "name": "TFM_TEST_HELPER_SERVICE",
+      # SIDs must be unique, ones that are currently in use are documented in
+      # tfm_secure_partition_addition.rst on line 184
+      "sid": "0x4c690401", # Bits [31:12] denote the vendor (change this),
+                          # bits [11:0] are arbitrary at the discretion of the
+                          # vendor.
+      "non_secure_clients": true,
+      "version": 1,
+      "version_policy": "STRICT"
+    }
+  ],
+
+  "dependencies": [
+    "TFM_HUK_EXPORT_PUBKEY",
+    "TFM_HUK_COSE_CBOR_ENC_SIGN",
+    "TFM_CRYPTO"
+  ]
+}

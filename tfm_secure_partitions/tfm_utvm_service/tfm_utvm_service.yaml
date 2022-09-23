@@ -1,0 +1,56 @@
+#-------------------------------------------------------------------------------
+# Copyright (c) 2020-2021, Arm Limited. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+#-------------------------------------------------------------------------------
+
+{
+  "psa_framework_version": 1.0,
+  "name": "TFM_SP_UTVM_SERVICE",
+  "type": "APPLICATION-ROT",
+  "priority": "NORMAL",
+  "entry_point": "tfm_utvm_service_req_mngr_init",
+  "stack_size": "0x2800",
+  "services": [
+    {
+      "name": "TFM_UTVM_SINE_MODEL_SERVICE",
+      # SIDs must be unique, ones that are currently in use are documented in
+      # tfm_secure_partition_addition.rst on line 184
+      "sid": "0x4c690320", # Bits [31:12] denote the vendor (change this),
+                          # bits [11:0] are arbitrary at the discretion of the
+                          # vendor.
+      "non_secure_clients": true,
+      "version": 1,
+      "version_policy": "STRICT"
+    },
+    {
+      "name": "TFM_UTVM_VERSION_INFO_SERVICE",
+      # SIDs must be unique, ones that are currently in use are documented in
+      # tfm_secure_partition_addition.rst on line 184
+      "sid": "0x4c690321", # Bits [31:12] denote the vendor (change this),
+                          # bits [11:0] are arbitrary at the discretion of the
+                          # vendor.
+      "non_secure_clients": false,
+      "version": 1,
+      "version_policy": "STRICT"
+    },
+        {
+      "name": "TFM_UTVM_MODEL_VERSION_INFO_SERVICE",
+      # SIDs must be unique, ones that are currently in use are documented in
+      # tfm_secure_partition_addition.rst on line 184
+      "sid": "0x4c690322", # Bits [31:12] denote the vendor (change this),
+                          # bits [11:0] are arbitrary at the discretion of the
+                          # vendor.
+      "non_secure_clients": false,
+      "version": 1,
+      "version_policy": "STRICT"
+    },
+  ],
+
+  "dependencies": [
+    "TFM_HUK_EXPORT_PUBKEY",
+    "TFM_HUK_COSE_CBOR_ENC_SIGN",
+    "TFM_CRYPTO"
+  ]
+}

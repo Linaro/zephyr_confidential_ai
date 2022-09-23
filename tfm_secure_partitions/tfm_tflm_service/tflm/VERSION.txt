@@ -1,0 +1,2 @@
+url: https://github.com/tensorflow/tflite-micro
+commit: c2018a7bf84364cc743491a52b41248497569e03

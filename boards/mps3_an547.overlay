@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2021 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+ &i2c_shield1 {
+	lsm303dlhc-magn@1e {
+		compatible = "st,lsm303dlhc-magn";
+		reg = <0x1e>;
+		label = "LSM303DLHC-MAGN";
+	};
+};

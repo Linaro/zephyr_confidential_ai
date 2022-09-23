@@ -1,0 +1,71 @@
+# Private config options for TF-M secure provisioning application
+
+# Copyright (c) 2021 Linaro
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "TF-M secure inference sample application"
+
+menu "Application configuration"
+
+module = PSA
+module-str = psa
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+config SECURE_INFER_SHELL_CMD_SUPPORT
+	bool "Enable custom shell commands for secure inference"
+	depends on SHELL
+	help
+	  Enabling this option will make secure inference shell commands available.
+
+config SECURE_INFER_HUK_DERIV_LABEL_EXTRA
+	string "Supplementary label value to append for key derivation"
+	help
+	  This string will be appended to the label used when deriving keys from
+	  the HUK in the secure HUK service. It is used exclusively by TF-M, but
+	  is exposed here for convenience purposes so that the Zephyr build
+	  system can pass it through to TF-M.
+
+config APP_NETWORKING
+	bool "Enabling support for networking in the secure app"
+	select NETWORKING
+	help
+	  Enable this to add support for networking in the secure demo
+
+config AZURE_SHELL_CMD_SUPPORT
+	bool "Enable custom shell commands for Azure"
+	depends on SHELL
+	help
+	  Enabling this option will make shell commands available for
+	  controlling communication with the Azure IoT Hub service.
+
+config AZURE_STACK_SIZE
+	int "Size of stack for main Azure thread"
+	default 4096
+	help
+	  Size of the stack to be used by the Azure worker thread.  Note that
+	  some of the work is done in this thread, and some is done in a worker
+	  thread.
+
+config BOOTSTRAP_SERVER_HOST
+	string "hostname for bootstrap server"
+	help
+	  DNS hostname for the bootstrap server.  This is the address
+	  provisioning will connect to to retrieve this devices
+	  initial provisioning data.
+
+config NV_PS_COUNTERS_SUPPORT
+	bool "Protected storage-based NV counter support enables."
+	default y
+	help
+	  Protected storage-based NV counter support enables.
+
+config NV_COUNTER_TRACKER_THRESHOLD_LIMIT
+	int "Threshold limit to write current protected storage-based NV counter value to persistent memory."
+	default 100
+	depends on NV_PS_COUNTERS_SUPPORT
+	help
+	  Threshold limit to write current protected storage-based NV counter value to persistent memory.
+
+source "Kconfig.zephyr"

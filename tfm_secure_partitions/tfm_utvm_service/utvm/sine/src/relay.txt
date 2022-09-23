@@ -1,0 +1,13 @@
+def @main(%dense_4_input: Tensor[(1, 1), float32], %v_param_1: Tensor[(16, 1), float32], %v_param_2: Tensor[(16), float32], %v_param_3: Tensor[(16, 16), float32], %v_param_4: Tensor[(16), float32], %v_param_5: Tensor[(1, 16), float32], %v_param_6: Tensor[(1), float32], output_tensor_names=["Identity"]) {
+  %0 = reshape(%dense_4_input, newshape=[-1, 1]);
+  %1 = nn.dense(%0, %v_param_1, units=16);
+  %2 = nn.bias_add(%1, %v_param_2);
+  %3 = nn.relu(%2);
+  %4 = reshape(%3, newshape=[-1, 16]);
+  %5 = nn.dense(%4, %v_param_3, units=16);
+  %6 = nn.bias_add(%5, %v_param_4);
+  %7 = nn.relu(%6);
+  %8 = reshape(%7, newshape=[-1, 16]);
+  %9 = nn.dense(%8, %v_param_5, units=1);
+  nn.bias_add(%9, %v_param_6)
+}

@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2022 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+
+&flash0 {
+	partitions {
+		/* Secure image primary slot */
+		slot0_partition: partition@34000 {
+			label = "image-0";
+			reg = <0x00034000 0x00060000>;
+		};
+		/* Non-secure image primary slot */
+		slot1_partition: partition@94000 {
+			label = "image-1-nonsecure";
+			reg = <0x00094000 0x00060000>;
+		};
+	};
+};
+
+&i2c2 {
+	status = "okay";
+
+	board_imu: ism330dhcx@6b {
+		compatible = "st,ism330dhcx";
+		reg = <0x6B>;
+		label = "ISM330DHCX";
+	};
+
+	board_mag: iis2mdc@1e {
+		compatible = "st,iis2mdc";
+		reg = <0x1E>;
+		label = "IIS2MDC";
+	};
+};
