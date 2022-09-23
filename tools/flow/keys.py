@@ -1,4 +1,4 @@
-# Certificate of authority operations
+# Key management
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend

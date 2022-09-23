@@ -7,20 +7,28 @@
 # Implements: RTOS-25
 
 import click
+from pathlib import Path
+import sys
+
 import config
+import keys
 
-import ca
-
-@click.command(help='''Generate a CA key to use''')
-def gen_ca():
-    print("Generate CA cert, to", config.ca_cert())
-    ca.gen()
+@click.command(help='''Generate keys to use''')
+def gen():
+    certdir = config.keydir()
+    if certdir.exists():
+        print("key directory already exists, remove to be able to create new")
+        sys.exit(1)
+    certdir.mkdir()
+    print("Generating CA to {}, and {}".format(config.ca_key(), config.ca_cert()))
+    keys.gen()
+    print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
 
 @click.command(cls=click.Group)
 def flow():
     pass
 
-flow.add_command(gen_ca)
+flow.add_command(gen)
 
 if __name__ == '__main__':
     flow()

@@ -9,14 +9,20 @@ from pathlib import Path
 
 cert_dir = Path("certs")
 
+def keydir():
+    return cert_dir
+
+# To simplify, we have a single device, with an ID of "device".
+device = "device"
+
 def ca_cert():
     return cert_dir / "CA.crt"
 
 def ca_key():
     return cert_dir / "CA.key"
 
-def device_cert(dev_id):
+def device_cert(dev_id=device):
     return cert_dir / (dev_id + ".crt")
 
-def device_key(dev_id):
+def device_key(dev_id=device):
     return cert_dir / (dev_id + ".key")
