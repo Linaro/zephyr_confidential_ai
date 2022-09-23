@@ -26,6 +26,10 @@ def gen():
     cert.save(config.ca_key(), config.ca_cert())
     print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
 
+    dev = keys.EndKey()
+    dev.gen(config.device, cert)
+    dev.save(config.device_key(), config.device_cert())
+
 @click.command(cls=click.Group)
 def flow():
     pass

@@ -10,11 +10,62 @@ import uuid
 
 import config
 
-class CA():
-    """Manage the CA."""
+# Internal class for things that have a possible private key and a
+# certificate.
+class Cert():
     def __init__(self):
         self.private = None
         self.public = None
+        self.cert = None
+
+    def save(self, keypath, certpath):
+        """
+        Save both the private key and the certificate to files of the given names.
+        """
+        self.save_key(keypath)
+        self.save_cert(certpath)
+
+    def save_key(self, keypath):
+        """
+        Write the private key for use by the certificate authority.
+
+        This is in
+        "openssl" format, and can be examined with:
+            openssl ec -in certs/CA.key -noout -text
+        or
+            openssl asn1parse -in certs/CA.key -inform PEM
+
+        In this case: the key will be something like (with obviously a
+        different actual key)
+
+           0:d=0  hl=2 l= 119 cons: SEQUENCE
+           2:d=1  hl=2 l=   1 prim:  INTEGER           :01
+           5:d=1  hl=2 l=  32 prim:  OCTET STRING      [HEX DUMP]:461D9FDBEBF0628161BE0FDB6AC23FF533E25E841938A89A78B355D46F08ECB3
+          39:d=1  hl=2 l=  10 cons:  cont [ 0 ]
+          41:d=2  hl=2 l=   8 prim:   OBJECT            :prime256v1
+          51:d=1  hl=2 l=  68 cons:  cont [ 1 ]
+          53:d=2  hl=2 l=  66 prim:   BIT STRING
+
+        Note that the private key file does not contain the public key,
+        although it will be printed out if requested by the 'ec' command (as
+        it can easily be generated).
+        """
+        enc_priv = self.private.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption())
+        with open(keypath, "wb") as fd:
+            fd.write(enc_priv)
+
+    def save_cert(self, certpath):
+        with open(certpath, "wb") as fd:
+            fd.write(self.cert.public_bytes(
+                encoding=serialization.Encoding.PEM))
+
+class CA(Cert):
+    """Manage the CA."""
+    def __init__(self):
+        pass
 
     def gen(self):
         """Generate a new certificate.
@@ -60,46 +111,47 @@ class CA():
         self.public = priv.public_key()
         self.cert = cert
 
-    def save(self, keypath, certpath):
+class EndKey(Cert):
+    """
+    An endpoint key.  One party will have the private key, and the cert will be public.
+    """
+    def __init__(self):
+        pass
+
+    def gen(self, name, ca):
         """
-        Save both the private key and the certificate to files of the given names.
+        Generate a new endpoint key, using the given CA.
+
+        The CA must have the private key loaded.
         """
-        self.save_key(keypath)
-        self.save_cert(certpath)
+        priv = ec.generate_private_key(ec.SECP256R1)
 
-    def save_key(self, keypath):
-        """
-        Write the private key for use by the certificate authority.
+        builder = x509.CertificateBuilder()
+        myname = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, name),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, u'Linaro Ltd'),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, u'LinaroCA Device Cert - Signing'),
+            ])
+        builder = builder.subject_name(myname)
+        builder = builder.issuer_name(ca.cert.subject)
+        builder = builder.not_valid_before(datetime.datetime.today())
+        builder = builder.not_valid_after(datetime.datetime.today() + datetime.timedelta(3650))
+        builder = builder.serial_number(int(uuid.uuid4()))
+        builder = builder.public_key(priv.public_key())
+        # TODO: Indicate what this is good for
+        #builder = builder.add_extension(
+        #        # Ugh, lovely API. Certificate signing is the 6th
+        #        # argument.
+        #        x509.KeyUsage(False, False, False, False, False, True, False, False, False),
+        #        critical=True)
+        builder = builder.add_extension(
+                x509.SubjectKeyIdentifier.from_public_key(priv.public_key()), critical=False)
+        builder = builder.add_extension(
+                x509.AuthorityKeyIdentifier.from_issuer_public_key(ca.cert.public_key()), critical=False)
+        cert = builder.sign(
+                private_key=ca.private, algorithm=hashes.SHA256(),
+                backend=default_backend())
 
-        This is in
-        "openssl" format, and can be examined with:
-            openssl ec -in certs/CA.key -noout -text
-        or
-            openssl asn1parse -in certs/CA.key -inform PEM
-
-        In this case: the key will be something like (with obviously a
-        different actual key)
-
-           0:d=0  hl=2 l= 119 cons: SEQUENCE
-           2:d=1  hl=2 l=   1 prim:  INTEGER           :01
-           5:d=1  hl=2 l=  32 prim:  OCTET STRING      [HEX DUMP]:461D9FDBEBF0628161BE0FDB6AC23FF533E25E841938A89A78B355D46F08ECB3
-          39:d=1  hl=2 l=  10 cons:  cont [ 0 ]
-          41:d=2  hl=2 l=   8 prim:   OBJECT            :prime256v1
-          51:d=1  hl=2 l=  68 cons:  cont [ 1 ]
-          53:d=2  hl=2 l=  66 prim:   BIT STRING
-
-        Note that the private key file does not contain the public key,
-        although it will be printed out if requested by the 'ec' command (as
-        it can easily be generated).
-        """
-        enc_priv = self.private.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption())
-        with open(keypath, "wb") as fd:
-            fd.write(enc_priv)
-
-    def save_cert(self, certpath):
-        with open(certpath, "wb") as fd:
-            fd.write(self.cert.public_bytes(
-                encoding=serialization.Encoding.PEM))
+        self.private = priv
+        self.public = priv.public_key()
+        self.cert = cert
