@@ -118,7 +118,7 @@ class EndKey(Cert):
     def __init__(self):
         pass
 
-    def gen(self, name, ca):
+    def gen(self, name, ca, purpose):
         """
         Generate a new endpoint key, using the given CA.
 
@@ -130,7 +130,8 @@ class EndKey(Cert):
         myname = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, name),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, u'Linaro Ltd'),
-            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, u'LinaroCA Device Cert - Signing'),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME,
+                               u'LinaroCA Device Cert - ' + purpose),
             ])
         builder = builder.subject_name(myname)
         builder = builder.issuer_name(ca.cert.subject)

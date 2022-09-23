@@ -27,12 +27,12 @@ def gen():
 
     print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
     dev = keys.EndKey()
-    dev.gen(config.device, cert)
+    dev.gen(config.device, cert, "Signing")
     dev.save(config.device_key(), config.device_cert())
 
     print("Generating cloud keys to {}, and {}".format(config.cloud_key(), config.cloud_cert()))
     cloud = keys.EndKey()
-    cloud.gen(config.cloud, cert) # TODO: Distinguish the types of these.
+    cloud.gen(config.cloud, cert, "Encryption") # TODO: Distinguish the types of these.
     cloud.save(config.cloud_key(), config.cloud_cert())
 
 @click.command(cls=click.Group)
