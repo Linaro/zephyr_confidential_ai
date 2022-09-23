@@ -24,11 +24,16 @@ def gen():
     cert = keys.CA()
     cert.gen()
     cert.save(config.ca_key(), config.ca_cert())
-    print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
 
+    print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
     dev = keys.EndKey()
     dev.gen(config.device, cert)
     dev.save(config.device_key(), config.device_cert())
+
+    print("Generating cloud keys to {}, and {}".format(config.cloud_key(), config.cloud_cert()))
+    cloud = keys.EndKey()
+    cloud.gen(config.cloud, cert) # TODO: Distinguish the types of these.
+    cloud.save(config.cloud_key(), config.cloud_cert())
 
 @click.command(cls=click.Group)
 def flow():
