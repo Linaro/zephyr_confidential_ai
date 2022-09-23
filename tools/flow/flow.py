@@ -21,7 +21,9 @@ def gen():
         sys.exit(1)
     certdir.mkdir()
     print("Generating CA to {}, and {}".format(config.ca_key(), config.ca_cert()))
-    keys.gen()
+    cert = keys.CA()
+    cert.gen()
+    cert.save(config.ca_key(), config.ca_cert())
     print("Generating device keys to {}, and {}".format(config.device_key(), config.device_cert()))
 
 @click.command(cls=click.Group)
