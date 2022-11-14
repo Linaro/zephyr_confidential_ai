@@ -97,7 +97,7 @@ This sample assumes you have already cloned zephyr locally. You will need to
 use a specific commit of zephyr to be sure that certain assumptions in this
 sample are met:
 
-- ``9562e3f794d7e3d4acc305e3a0dd52536a867586``
+- ``45e1ff94cdbc395ab9f87d948580cefd585479c5``
 
 Run these commands to checkout the expected commit hash, and apply a required
 patch to TF-M, allowing us to enable CPP support in the TF-M build system. This
@@ -108,7 +108,7 @@ allocation for the secure image(s), where required:
 
    $ cd path/to/zephyrproject/zephyr
    $ source zephyr-env.sh
-   $ git checkout 9562e3f794d7e3d4acc305e3a0dd52536a867586
+   $ git checkout 45e1ff94cdbc395ab9f87d948580cefd585479c5
    $ west update
    $ cd ../modules/tee/tf-m/trusted-firmware-m
    $ git apply <sample-path>/patch/tfm.patch
@@ -178,7 +178,7 @@ Sample Output
    [NV PS COUNTERS] nv_ps_counter_rollover_tracker 0
    [NV PS COUNTERS] NV_PS_COUNTER_ROLLOVER_MAX 4294967200
    [NV PS COUNTERS] NV_COUNTER_TRACKER_THRESHOLD_LIMIT 100
-   *** Booting Zephyr OS build zephyr-v3.1.0-3390-g9562e3f794d7  ***
+   *** Booting Zephyr OS build zephyr-v3.2.0-1553-g45e1ff94cdbc ***
    [HUK DERIV SERV] Generated UUID: 45b51869-8132-4e15-b780-288d521a5078
 
 

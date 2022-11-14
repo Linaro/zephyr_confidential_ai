@@ -7,7 +7,7 @@
 #ifndef INFER_MGMT_H
 #define INFER_MGMT_H
 
-#include <zephyr/zephyr.h>
+#include <zephyr/kernel.h>
 #include <psa/error.h>
 #include "key_mgmt.h"
 
