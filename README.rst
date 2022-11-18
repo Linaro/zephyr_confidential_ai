@@ -471,3 +471,69 @@ Step 4:
    $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -ob wrp2b_pstrt=0x7f
    $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -ob wrp2b_pend=0x0
 
+Adding an external WIFI interface shield based on MikroE click boards
+**********************************************************************
+
+It is possible to add an external WiFI interface based on MikroElektronika click boards attaching
+them to the arduino_serial or mikrobus_serial nodes of a board like B-U585I-IOT02A, these shields are based
+on ESP8266 which are very affordable way to run the samples on SoCs that don't have a native networking support.
+
+.. image:: https://github.com/Linaro/zephyr_secure_inference/blob/main/docs/wifi-esp-click.png?raw=true
+  :alt: MikroElektronika WiFi-ESP-Click board.
+
+The board pinout is referred below:
+
++-----------------------+---------------------------------------------+
+| Shield Connector Pin  | Function                                    |
++=======================+=============================================+
+| RST#                  | ESP8266 Module Reset                        |
++-----------------------+---------------------------------------------+
+| TXD                   | Serial data transmission output pin         |
++-----------------------+---------------------------------------------+
+| RXD                   | Serial data reception input pin             |
++-----------------------+---------------------------------------------+
+
+Before usage, This shield should be loaded with the `ESP8266 AT Bin`_ software which is available at 
+Espressif Systems web site. This version is command compatible with ESP8266 AT Bin 2.0.0, after getting 
+the binary from Espressif site, connect the J1 of the board to a serial-to-USB converter of your
+preference, or to one Espressif programming boards like ESP-Prog on the HD1 connector, short circuit 
+pins 5 and 6 to put the ESP8266 into download mode, on other modules, this is the same to tie the 
+IO0 pin to GND. Install the `ESP-Tool`_, then extract the downloaded folder, navigate inside 
+<extraction_directory>/ESP8266_NonOS_AT_Bin_V1.7.5_1/ESP8266_NonOS_AT_Bin_V1.7.5/bin, then type the 
+following command to flash the device:
+
+.. code-block:: console
+
+   esptool.py --chip auto --baud 115200 --before default_reset --after hard_reset write_flash \
+   --flash_mode dio \
+   --flash_freq 40m \
+   --flash_size 2MB \
+   0x00000 boot_v1.7.bin \
+   0x01000 at/512+512/user1.1024.new.2.bin \
+   0xfc000 esp_init_data_default.bin \
+   0x7e000 blank.bin \
+   0xfe000 blank.bin \
+
+If necessary, you can indicate a specific port via ``--port <Selected PORT>``.
+
+Once flashed, it is possible to verify the module. While connected, open your preferred
+terminal configured as 115200, 8, N, 1 and perform a board reset. You should see an
+initial log and last message should be the version of the AT firmware flashed.
+
+After flashing the firmware you may also able to build the the sample and tests 
+with the shield enabled as network interface to do so Set ``-DSHIELD=<shield designation>`` 
+when you invoke ``west build``.
+
+See this example for the b_u585i_iot02a development kit, using the Arduino connector for the UART pins:
+
+.. code-block:: console
+
+   $ west build -p auto -b b_u585i_iot02a -- -DSHIELD=esp_8266_arduino
+
+References
+**********
+
+.. target-notes::
+
+.. _ESP8266 AT Bin:
+   https://www.espressif.com/sites/default/files/ap/ESP8266_NonOS_AT_Bin_V1.7.5_1.zip
