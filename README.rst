@@ -97,7 +97,7 @@ Certain operations like signing or encrypting the COSE-encoded inference engine
 outputs require the use of keys, and X.509 certificates for these keys.
 
 All keys used in this project are derived at startup from the Hardware Unique
-Key (HUK), meaning that they are device-bound (i.e. explicity tied to a
+Key (HUK), meaning that they are device-bound (i.e. explicitly tied to a
 specific instance of an SoC), storage-free (meaning they can't be retrieved
 by dumping flash memory or firmware analysis), and repeatable across firmware
 updates.
@@ -430,7 +430,7 @@ necessary to change AT THE SAME TIME the TZEN and the RDP bits.
 Hence, TZEN needs to get set from 1 to 0 and RDP, AT THE SAME TIME, needs to get
 set from DC to AA (step 3 below).
 
-This is docummented in the `AN5347, in section 9, "TrustZone deactivation" <https://www.st.com/resource/en/application_note/dm00625692-stm32l5-series-trustzone-features-stmicroelectronics.pdf>`_.
+This is documented in the `AN5347, in section 9, "TrustZone deactivation" <https://www.st.com/resource/en/application_note/dm00625692-stm32l5-series-trustzone-features-stmicroelectronics.pdf>`_.
 
 However it happens that the RDP bit is probably not set to DC yet, so first you
 need to set it to DC (step 2).
