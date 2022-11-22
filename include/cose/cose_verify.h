@@ -7,7 +7,7 @@
 #ifndef COSE_VERIFY_H
 #define COSE_VERIFY_H
 
-#include <zephyr/zephyr.h>
+#include <zephyr/kernel.h>
 #include <string.h>
 #include "nanocbor/nanocbor.h"
 #include "psa/crypto_types.h"

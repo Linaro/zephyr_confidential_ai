@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <zephyr/logging/log.h>
 
 #include "key_mgmt.h"

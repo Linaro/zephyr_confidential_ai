@@ -1,26 +1,78 @@
 .. _tfm_secure_inference:
 
-TF-M Confidential AI Project
-############################
+Confidential AI (TF-M + Zephyr)
+###############################
+
+What is Confidential AI?
+************************
+
+Confidential AI is:
+
+* An attempt to demonstrate end-to-end (boot-to-cloud) security best practices
+* ... making use of the security features on modern Armv8-M (M33/M55) hardware
+* ... based on open source software and open standards
+* ... with AI/ML workloads as a test case
+
+The project has the following design goals:
+
+* Remain vendor nuetral:
+
+  * TensorFlow Lite Micro or TVM as an inference engine
+  * Multiple cloud providers possible
+
+* Emulation friendly:
+
+  * Cortex-M33 (AN521) and Cortex-M55 (AN547) emulation in QEMU or Arm FVP
+
+* Based on open source projects:
+
+  * MCUBoot
+  * Trusted Firmware-M
+  * Zephyr
+  * LITE Bootstrap Server (certificate authority)
+
+* ... and open standards:
+
+  * TLS
+  * X.509 certificates
+  * COSE for data encoding, signing and encryption
 
 .. image:: https://github.com/Linaro/zephyr_secure_inference/blob/main/docs/arch-overview.flat.png?raw=true
   :alt: Confidential AI Architecture Overview
 
 Overview
-********
+########
 
 This Zephyr project provides a complete secure (S) plus non-secure (NS)
-solution for execution of an inference engine in the secure processing
-environment, as well as end-to-end processing of inference outputs.
+firmware solution for execution of an inference engine in the secure
+processing environment, as well as end-to-end processing of inference outputs.
 
 Outputs from the inference engine are encoded as CBOR payloads, with COSE used
-to  enable optional signing and encryption of the data.
+to enable optional signing and encryption of the data.
+
+Secure boot is based on MCUBoot. The secure firmware is based on
+Trusted-Firmware-M. The non-secure firmware is based on Zephyr RTOS.
+
+Build Process
+*************
+
+Zephyr controls the entire build process, building TF-M as well as the secure
+bootloader during the normal Zephyr build. The secure and non-secure
+firmware images are signed as part of the build process, with the public
+signing keys written into the bootloader for verification during firmware
+updates.
+
+Secure Services
+***************
 
 Custom secure services are included in the sample in the
 ``tfm_secure_inference_partitions`` folder:
 
-- TF-M HUK Key Derivation: UUID and key derivation from the HUK
-- TFLM Service: TensorFlow Lite Micro inference engine and model execution
+* ``tfm_huk_deriv_srv``: Device-bound UUID and key derivation from the hardware
+  unique key (HUK).
+* ``tfm_tflm_service``: TensorFlow Lite Micro inference engine and model
+  execution
+* ``tfm_utvm_service``: TVM inference engine and model execution
 
 These secure services are added to TF-M as part of the secure build process
 that takes place before the NS Zephyr application is built, and are
@@ -28,24 +80,24 @@ available to the NS environment based on the access-rights specified in
 the service definition files.
 
 Inference Engine(s)
-===================
+*******************
 
-This sample currently uses TensorFlow Lite Micro (TFLM) and microTVM as the inference engines,
-with a simple sine-wave model.
-
-This will be extended to support more complex AI/ML models soon.
+This sample currently uses TensorFlow Lite Micro (TFLM) and TVM as the
+inference engines, with a simple sine-wave model by default.
 
 You can interact with the sine wave model from the NS side via the ``infer``
 shell command.
 
-Key management
-==============
+More complex AI/ML models in the future.
+
+Key and Certificate Management
+******************************
 
 Certain operations like signing or encrypting the COSE-encoded inference engine
 outputs require the use of keys, and X.509 certificates for these keys.
 
 All keys used in this project are derived at startup from the Hardware Unique
-Key (HUK), meaning that they are device-bound (i.e. explicity tied to a
+Key (HUK), meaning that they are device-bound (i.e. explicitly tied to a
 specific instance of an SoC), storage-free (meaning they can't be retrieved
 by dumping flash memory or firmware analysis), and repeatable across firmware
 updates.
@@ -63,41 +115,51 @@ The non-secure processing environment exposes a ``keys`` shell command that can
 be used to retrieve the public key component of the above private keys, as well
 as generate a certificate signing request (CSR) for a specific key.
 
-Non-volatile counter
-====================
+Non-Volatile Counter
+********************
 
-TF-M has a standard NV Counter API, defined here: ``https://git.trustedfirmware.org/TF-M/trusted-firmware-m.git/tree/platform/include/tfm_plat_nv_counters.h``,
+TF-M has a standard NV Counter API, defined here:
+``https://git.trustedfirmware.org/TF-M/trusted-firmware-m.git/tree/platform/include/tfm_plat_nv_counters.h``,
 but which can't be used by application ROT services as it is pre-allocated.
 
-Created custom NV counters support based on protected storage in secure inference, currently, two
-NV counters of 4bytes in each size for NV counter and NV roll-over counter, avoid frequent
-read-write to PS, added another two RAM based static local tracker of NV tracker counter and NV
-rollover tracker counter.
+Created custom NV counters support based on protected storage in secure
+inference, currently, two NV counters of 4bytes in each size for NV counter and
+NV roll-over counter, avoid frequent read-write to PS, added another two RAM
+based static local tracker of NV tracker counter and NV rollover tracker
+counter.
 
-NV counters support is enabled via project Kconfig variable ``NV_PS_COUNTERS_SUPPORT`` (default
-enabled) in the build and another variable ``NV_COUNTER_TRACKER_THRESHOLD_LIMIT`` for setting the
-threshold limit to write back NV tracker counter value to PS (by default threshold limit set as
-100).
+NV counters support is enabled via project Kconfig variable
+``NV_PS_COUNTERS_SUPPORT`` (default enabled) in the build and another variable
+``NV_COUNTER_TRACKER_THRESHOLD_LIMIT`` for setting the threshold limit to write
+back NV tracker counter value to PS (by default threshold limit set as 100).
 
-On every boot (or first use), read both counters from PS, and store them to local tracker counter
-variables.
+On every boot (or first use), read both counters from PS, and store them to
+local tracker counter variables.
 
-Roll over NV counter is incremented whenever the current NV tracker counter value is greater than
-the UINT32_MAX (which is aligned with ``NV_COUNTER_TRACKER_THRESHOLD_LIMIT`` value), reset current
-NV tracker counter to zero, and write back both tracker counters (NV counter and NV rollover
+Roll over NV counter is incremented whenever the current NV tracker counter
+value is greater than the UINT32_MAX (which is aligned with
+``NV_COUNTER_TRACKER_THRESHOLD_LIMIT`` value), reset current NV tracker counter
+to zero, and write back both tracker counters (NV counter and NV rollover
 counter) to PS.
 
-NV tracker counter value will be inserted into every COSE/CBOR payload as an additional field
-along with the inference value.
+NV tracker counter value will be inserted into every COSE/CBOR payload as an
+additional field along with the inference value.
 
-Required Setup
-**************
+Setup
+#####
 
-This sample assumes you have already cloned zephyr locally. You will need to
-use a specific commit of zephyr to be sure that certain assumptions in this
-sample are met:
+This sample assumes you have already cloned zephyr locally, and have a copy
+of this repository available somewhere out-of-tree (relative to Zephyr).
 
-- ``9562e3f794d7e3d4acc305e3a0dd52536a867586``
+Zephyr Setup
+************
+
+You will need to use a specific commit of zephyr to be sure that certain
+assumptions in this codebase are met.
+
+This Zephyr commit hash used is:
+
+- ``45e1ff94cdbc395ab9f87d948580cefd585479c5``
 
 Run these commands to checkout the expected commit hash, and apply a required
 patch to TF-M, allowing us to enable CPP support in the TF-M build system. This
@@ -108,17 +170,77 @@ allocation for the secure image(s), where required:
 
    $ cd path/to/zephyrproject/zephyr
    $ source zephyr-env.sh
-   $ git checkout 9562e3f794d7e3d4acc305e3a0dd52536a867586
+   $ git checkout 45e1ff94cdbc395ab9f87d948580cefd585479c5
    $ west update
    $ cd ../modules/tee/tf-m/trusted-firmware-m
-   $ git apply <sample-path>/patch/tfm.patch
+   $ git apply --verbose <zephyr_secure_inference_path>/patch/tfm.patch
+
+
+Provisioning Key/Cert Setup
+***************************
+
+If you are building with networking support, some files from the
+`LITE Bootstrap Server <https://github.com/Linaro/lite_bootstrap_server>`_
+are also required to be copied into your sample application.
+
+This bootstrap server is used to provide connection details for the MQTT
+broker, and as a certificate authority to process certificate signing
+requests (CSRs). Once a device is registered in the bootstrap server, other
+devices or services can verify the existence and validity of device
+certificates and get the public keys required to verify signed payloads, etc.
+
+Communicating with the LITE Bootstrap server requires having a shared
+'bootstrap' private key and certificate available on the connecting device,
+as well as a copy of the CA certificate to verify the TLS connection.
+
+Once you've cloned and built the LITE Bootstrap Server, run the following
+scripts once in that repo, which will generate the files we need to
+copy into this Zephyr application:
+
+- ``setup-ca.sh``
+- ``setup-bootstrap.sh``
+
+The following files need to be copied into this codebase:
+
+.. code-block::
+
+   <bootstrap>/certs/bootstrap_crt.txt -> src/bootstrap_crt.txt
+   <bootstrap>/certs/bootstrap_key.txt -> src/bootstrap_key.txt
+   <bootstrap>/certs/ca_crt.txt        -> src/ca_crt.txt
+
+Before running this codebase, be sure that you also execute the
+``run-server.sh`` script to start the LITE Bootstrap Server.
+
+If everything is configured correctly you can run the ``keys ca 5001`` shell
+command to get an X.509 certificate for the client TLS key:
+
+.. code-block::
+
+   uart:~$ keys ca 5001
+   TODO: Add sample output
+
+And you should see the following log message for the bootstrap server:
+
+.. code-block::
+
+   $ ./run-server.sh
+   TODO: Add output with log message from device registration
+
 
 Building and Running
 ********************
 
-This app is built as a Zephyr application, and can be built with the west
-command.  There are a few config options that need to be set in order for it to
-build successfully.  A sample configuration could be:
+On Target
+=========
+
+ToDo: Add build instructions for B-U585I-IOT02A:
+
+* Without networking
+* With Mikroe Wifi ESP click shield (MIKROE-2542)
+* With Mikroe ETH click shield (MIKROE-971)
+
+On QEMU:
+========
 
 Build without networking support:
 
@@ -140,18 +262,8 @@ Build with networking support and QEMU user mode for networking:
    ``DCONFIG_BOOTSTRAP_SERVER_HOST`` should point to the domain name where
    the bootstrap server is located. This may be a proper domain, or the
    output of the `hostname` command, depending on how the bootstrap server
-   was configured. See https://github.com/microbuilder/linaroca
+   was configured. See https://github.com/Linaro/lite_bootstrap_server
    for details.
-
-On Target
-=========
-
-Refer to :ref:`tfm_ipc` for detailed instructions.
-
-On QEMU:
-========
-
-Refer to :ref:`tfm_ipc` for detailed instructions.
 
 Sample Output
 =============
@@ -178,7 +290,7 @@ Sample Output
    [NV PS COUNTERS] nv_ps_counter_rollover_tracker 0
    [NV PS COUNTERS] NV_PS_COUNTER_ROLLOVER_MAX 4294967200
    [NV PS COUNTERS] NV_COUNTER_TRACKER_THRESHOLD_LIMIT 100
-   *** Booting Zephyr OS build zephyr-v3.1.0-3390-g9562e3f794d7  ***
+   *** Booting Zephyr OS build zephyr-v3.2.0-1553-g45e1ff94cdbc ***
    [HUK DERIV SERV] Generated UUID: 45b51869-8132-4e15-b780-288d521a5078
 
 
@@ -226,11 +338,62 @@ command can be used to query the bootstrap server.
    00000010 EB F5 18 21 87 AE 38 30 0A 06 08 2A 86 48 CE 3D ...!..80...*.H.=
    ...
 
+Test Suite (Twister/ZTest)
+##########################
+
+You can find the integration tests in the ``tests`` folder, with the following
+structure:
+
+.. code-block:: console
+
+   tests
+   │
+   └───test_service
+   └───tfm_huk_deriv_srv
+       │─── src
+       │─── CMakeLists.tx
+       │─── prj.conf
+       └─── testcase.yaml
+
+
+Building and Running the Tests on QEMU
+**************************************
+
+To run the entire test suite:
+
+.. code-block:: console
+
+   $ cd path/to/zephyr
+   $ source zephyr-env.sh
+   $ twister -p mps2_an521_ns -N --inline-logs \
+      -T path/to/modules/outoftree/zephyr_secure_inference/tests
+
+
+To run a specific test (HUK key derivation service test here):
+
+.. code-block:: console
+
+   $ twister -p mps2_an521_ns -N --inline-logs \
+     -T modules/outoftree/zephyr_secure_inference/tests/tfm_sp/tfm_huk_deriv_srv/
+
+
 Common Problems
-***************
+###############
+
+Compilation fails with ``ca_crt.txt: No such file or directory``
+****************************************************************
+
+If you are building with networking support, some files from the
+`LITE Bootstrap Server <https://github.com/Linaro/lite_bootstrap_server>`_
+are required to be copied into your sample application so that it can generate
+X.509 certificates, and communicate with the MQTT Broker that the bootstrap
+server describes.
+
+This error means that you didn't copy the required key and certificate files
+over, as described in the 'Provisioning' setup section of this guide.
 
 Why are my derived keys values and UUID always the same?
-=========================================================
+********************************************************
 
 TF-M defines a hard-coded HUK value for the mps2 and mps3 platforms, meaning
 that every instance of this sample run on these platforms will derive the same
@@ -253,67 +416,8 @@ It can be defined at compile time with west via:
    $ west build -p -b mps2_an521_ns -t run -- \
      -DCONFIG_SECURE_INFER_HUK_DERIV_LABEL_EXTRA=\"123456789012345\"
 
-Compilation fails with ``ca_crt.txt: No such file or directory``
-===============================================================
-
-If you are building with networking support, some files from the LITE
-Bootstrap Server (https://github.com/microbuilder/linaroca) are required to
-be copied into your sample application so that it can generate X.509
-certificates, and communicate with the MQTT Broker that the bootstrap server
-describes.
-
-Make sure you've run the following scripts in the bootstrap server:
-
-- ``setup-ca.sh``
-- ``setup-bootstrap.sh``
-
-And then copy the following files:
-
-.. code-block::
-
-   <bootstrap>/certs/bootstrap_crt.txt -> src/bootstrap_crt.txt
-   <bootstrap>/certs/bootstrap_key.txt -> src/bootstrap_key.txt
-   <bootstrap>/certs/ca_crt.txt        -> src/ca_crt.txt
-
-Before running this sample, be sure that you also execute the
-``run-server.sh`` script to start the LITE bootstrap server.
-
-If everything is configured correctly you can run the ``keys ca 5001`` shell
-command to get an X.509 certificate for the client TLS key:
-
-.. code-block::
-
-   uart:~$ keys ca 5001
-   argc: 2
-   [00:00:25.904,000] <inf> app: uuid: d74696ad-cb3b-4275-b74a-c346ffe71ea9
-
-   Generating X.509 CSR for 'Device Client TLS' key:
-   Subject: O=Linaro,CN=d74696ad-cb3b-4275-b74a-c346ffe71ea9,OU=Device Client TLS
-   [HUK DERIV SERV] Verified ASN.1 tag and length of the payload
-   [HUK DERIV SERV] Key id: 0x5001
-   cert starts at 0x2e2 into buffer
-   [00:00:26.787,000] <inf> app: Got DNS for linaroca
-   [00:00:27.346,000] <inf> app: All data received 591 bytes
-   [00:00:27.346,000] <inf> app: Response to req
-   [00:00:27.347,000] <inf> app: Status OK
-   [00:00:27.348,000] <inf> app: Result: 3
-   [00:00:27.349,000] <inf> app: cert: 461 bytes
-   ...
-   [00:00:27.403,000] <inf> app: Request result: 390
-   [00:00:27.408,000] <inf> app: Close: 0
-
-And you should see the following log message for the bootstrap server:
-
-.. code-block::
-
-   $ ./run-server.sh
-   Using config file: /Users/xyz/linaroca/.linaroca.toml
-   Starting mTLS TCP server on MBP2021.lan:8443
-   Starting CA server on https://MBP2021.lan:1443
-   2022/05/23 12:47:07 Received CSR: CN=d74696ad-cb3b-4275-b74a-c346ffe71ea9,OU=Device Client TLS,O=Linaro
-
 How to disable TrustZone on the ``B-U585I-IOT02A``?
-===================================================
+***************************************************
 
 If you have flashed a sample to the B-U585I-IOT02A board that enables TrustZone,
 you will need to disable it before you can flash and run a new non-TrustZone
@@ -326,7 +430,7 @@ necessary to change AT THE SAME TIME the TZEN and the RDP bits.
 Hence, TZEN needs to get set from 1 to 0 and RDP, AT THE SAME TIME, needs to get
 set from DC to AA (step 3 below).
 
-This is docummented in the `AN5347, in section 9, "TrustZone deactivation" <https://www.st.com/resource/en/application_note/dm00625692-stm32l5-series-trustzone-features-stmicroelectronics.pdf>`_.
+This is documented in the `AN5347, in section 9, "TrustZone deactivation" <https://www.st.com/resource/en/application_note/dm00625692-stm32l5-series-trustzone-features-stmicroelectronics.pdf>`_.
 
 However it happens that the RDP bit is probably not set to DC yet, so first you
 need to set it to DC (step 2).
@@ -367,65 +471,3 @@ Step 4:
    $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -ob wrp2b_pstrt=0x7f
    $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -ob wrp2b_pend=0x0
 
-Integration test using ZTest and twister
-========================================
-
-You can find the integration tests under path/to/zephyr_secure_inference/tests and follows below directory structure:
-
-.. code-block:: console
-
-   tests
-   │
-   └───test_service
-   └───tfm_huk_deriv_srv
-       │─── src
-       │─── CMakeLists.tx
-       │─── prj.conf
-       └─── testcase.yaml
-
-
-Building and Running the test on QEMU
-*************************************
-
-Run all the tests using the command:
-
-.. code-block:: console
-
-   $ cd path/to/zephyr
-   $ source zephyr-env.sh
-   $ twister -p mps2_an521_ns -N --inline-logs \
-      -T path/to/modules/outoftree/zephyr_secure_inference/tests
-
-For example to run a specific HUK key derivation service test using the command:
-
-.. code-block:: console
-
-   $ twister -p mps2_an521_ns -N --inline-logs \
-     -T modules/outoftree/zephyr_secure_inference/tests/tfm_sp/tfm_huk_deriv_srv/
-
-Sample test execution logs
-***************************
-
-.. code-block:: console
-
-   Install the anytree module to use the --test-tree option
-   Renaming output directory to /home/arm/projects/zephyrproject/zephyr/twister-out.1
-   INFO    - Using Ninja..
-   INFO    - Zephyr version: zephyr-v3.1.0-2265-g62f19cc6b3d4
-   INFO    - Using 'zephyr' toolchain.
-   INFO    - Selecting default platforms per test case
-   INFO    - Building initial testsuite list...
-   INFO    - Writing JSON report /home/arm/projects/zephyrproject/zephyr/twister-out/testplan.json
-   INFO    - JOBS: 8
-   INFO    - 1 test scenarios (1 configurations) selected, 0 configurations discarded due to filters.
-   INFO    - Adding tasks to the queue...
-   INFO    - Added initial list of jobs to queue
-   INFO    - Total complete:    1/   1  100%  skipped:    0, failed:    0
-   INFO    - 1 of 1 test configurations passed (100.00%), 0 failed, 0 skipped with 0 warnings in 75.06 seconds
-   INFO    - In total 2 test cases were executed, 0 skipped on 1 out of total 473 platforms (0.21%)
-   INFO    - 1 test configurations executed on platforms, 0 test configurations were only built.
-   INFO    - Saving reports...
-   INFO    - Writing JSON report /home/arm/projects/zephyrproject/zephyr/twister-out/twister.json
-   INFO    - Writing xunit report /home/arm/projects/zephyrproject/zephyr/twister-out/twister.xml...
-   INFO    - Writing xunit report /home/arm/projects/zephyrproject/zephyr/twister-out/twister_report.xml...
-   INFO    - Run completed

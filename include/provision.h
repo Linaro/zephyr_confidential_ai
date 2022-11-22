@@ -7,7 +7,7 @@
 #ifndef __PROVISION_H__
 #define __PROVISION_H__
 
-#include <zephyr/zephyr.h>
+#include <zephyr/kernel.h>
 
 #include "psa/error.h"
 #include "key_mgmt.h"
