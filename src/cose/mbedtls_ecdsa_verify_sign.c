@@ -78,9 +78,7 @@ int mbedtls_ecp_load_pubkey(mbedtls_pk_context *ctx,
 		goto err;
 	}
 
-	return status;
 err:
-	al_dump_log();
 	return status;
 }
 
@@ -115,7 +113,6 @@ int mbedtls_ecdsa_verify_sign(mbedtls_pk_context ctx,
 	}
 	return status;
 err:
-	al_dump_log();
 	mbedtls_mpi_free(&r);
 	mbedtls_mpi_free(&s);
 	return status;

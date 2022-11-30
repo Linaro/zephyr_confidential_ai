@@ -45,4 +45,4 @@ jobs:
       - name: Test
         working-directory: zephyr_confidential_ai
         run: |
-          ../zephyr/scripts/twister --inline-logs -p mps2_an521 -T tests  -v
+          ../zephyr/scripts/twister --inline-logs -p mps2_an521_ns -T tests  -v
