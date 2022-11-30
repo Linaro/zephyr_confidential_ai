@@ -37,7 +37,7 @@ The project has the following design goals:
   * X.509 certificates
   * COSE for data encoding, signing and encryption
 
-.. image:: https://github.com/Linaro/zephyr_secure_inference/blob/main/docs/arch-overview.flat.png?raw=true
+.. image:: https://github.com/Linaro/zephyr_confidential_ai/blob/main/docs/arch-overview.flat.png?raw=true
   :alt: Confidential AI Architecture Overview
 
 Overview
@@ -366,7 +366,7 @@ To run the entire test suite:
    $ cd path/to/zephyr
    $ source zephyr-env.sh
    $ twister -p mps2_an521_ns -N --inline-logs \
-      -T path/to/modules/outoftree/zephyr_secure_inference/tests
+      -T path/to/modules/outoftree/zephyr_confidential_ai/tests
 
 
 To run a specific test (HUK key derivation service test here):
@@ -374,7 +374,7 @@ To run a specific test (HUK key derivation service test here):
 .. code-block:: console
 
    $ twister -p mps2_an521_ns -N --inline-logs \
-     -T modules/outoftree/zephyr_secure_inference/tests/tfm_sp/tfm_huk_deriv_srv/
+     -T modules/outoftree/zephyr_confidential_ai/tests/tfm_sp/tfm_huk_deriv_srv/
 
 
 Common Problems
