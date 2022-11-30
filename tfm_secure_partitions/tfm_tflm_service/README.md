@@ -74,12 +74,12 @@ runtime:
 third_party to TFM tflm secure service:
 
      ```bash
-     $ cp /tmp/tflm-tree/tensorflow path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_tflm_service/tflm
-     $ cp /tmp/tflm-tree/third_party path/to/path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_tflm_service/tflm
-     $ cp /tmp/tflm-tree/examples/hello_world/* path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_tflm_service/hello_world
+     $ cp /tmp/tflm-tree/tensorflow path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_tflm_service/tflm
+     $ cp /tmp/tflm-tree/third_party path/to/path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_tflm_service/tflm
+     $ cp /tmp/tflm-tree/examples/hello_world/* path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_tflm_service/hello_world
      ```
 
-2. Update `CMakeLists.txt` in `path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_tflm_service/hello_world`, `path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_tflm_service/tflm/` if necessary.
+2. Update `CMakeLists.txt` in `path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_tflm_service/hello_world`, `path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_tflm_service/tflm/` if necessary.
 
 ## Build and run
 
@@ -91,13 +91,13 @@ upstream Zephyr and check out the `tfm_secure_inference` branch.
 2. Build basic blinky example to confirm zephyr setup using
 `west build -p auto -b mps2_an521 samples/basic/blinky` command.
 
-3. Copy the `zephyr_secure_inference` directory to
+3. Copy the `zephyr_confidential_ai` directory to
 `path/to/zephyr/modules/outoftree/`.
 
 4. Run the command to build and run secure inference using QEMU:
 
     ```bash
-    $ west build -p auto -b mps2_an521_ns modules/outoftree/zephyr_secure_inference -t run
+    $ west build -p auto -b mps2_an521_ns modules/outoftree/zephyr_confidential_ai -t run
     ```
 
 5. Expected output:

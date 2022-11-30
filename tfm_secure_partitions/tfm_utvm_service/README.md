@@ -175,16 +175,16 @@ for more details:
 1. Copy sine directory to TFM utvm secure service:
 
     ```bash
-    cp -r $HOME/git/tvm/build/sine path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_utvm_service/utvm/
+    cp -r $HOME/git/tvm/build/sine path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_utvm_service/utvm/
     ```
 
-2. Update `CMakeLists.txt` in ` zephyr_secure_inference/tfm_secure_partitions/tfm_utvm_service/utvm/CMakeLists.txt ` if necessary.
+2. Update `CMakeLists.txt` in ` zephyr_confidential_ai/tfm_secure_partitions/tfm_utvm_service/utvm/CMakeLists.txt ` if necessary.
 
 ## TF-M TVM Platform APIs implementation:
 
 1. Generated uTVM sine model and runtime is dependent on the platform abort and
 memory handling APIs as listed below and those APIs are implemented in this
-`path/to/zephyr_secure_inference/tfm_secure_partitions/tfm_utvm_service/tfm_utvm_platform/utvm_platform.c`
+`path/to/zephyr_confidential_ai/tfm_secure_partitions/tfm_utvm_service/tfm_utvm_platform/utvm_platform.c`
 file based on TF-M:
 
     ```
@@ -212,12 +212,12 @@ upstream Zephyr and check out the `tfm_secure_inference` branch.
 2. Build basic blinky example to confirm zephyr setup using
 `west build -p auto -b mps2_an521 samples/basic/blinky` command.
 
-3. Copy the `zephyr_secure_inference` directory to
+3. Copy the `zephyr_confidential_ai` directory to
 `path/to/zephyr/modules/outoftree/`.
 
 4. Run the command to build and run secure inference using QEMU:
     ```bash
-    west build -p auto -b mps2_an521_ns modules/outoftree/zephyr_secure_inference -t run
+    west build -p auto -b mps2_an521_ns modules/outoftree/zephyr_confidential_ai -t run
     ```
 
 5. Expected output:
