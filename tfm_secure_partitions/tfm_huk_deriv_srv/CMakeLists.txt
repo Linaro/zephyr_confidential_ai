@@ -55,13 +55,15 @@ target_sources(tfm_partitions
 target_link_libraries(tfm_app_rot_partition_huk_deriv
     PRIVATE
         tfm_secure_api
-        psa_interface
         secure_fw
         platform_s
-        tfm_qcbor_s
-        tfm_t_cose_s
         tfm_sprt
         tfm_psa_rot_partition_crypto
+)
+
+target_link_libraries(tfm_app_rot_partition_huk_deriv
+    PUBLIC
+        tfm_t_cose_s
 )
 
 target_link_libraries(tfm_partitions
