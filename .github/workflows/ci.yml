@@ -34,13 +34,31 @@ jobs:
           cd ../modules/tee/tf-m/trusted-firmware-m
           git apply ../../../../zephyr_confidential_ai/patch/tfm.patch
 
-      - name: Build app
+      - name: Build app with isolation level 1
         working-directory: zephyr_confidential_ai
         run: |
           cp ci_certs/bootstrap_crt.txt src/bootstrap_crt.txt
           cp ci_certs/bootstrap_key.txt src/bootstrap_key.txt
           cp ci_certs/ca_crt.txt src/ca_crt.txt
           west build -p always -b mps2_an521_ns
+
+      - name: Build app with isolation level 2
+        working-directory: zephyr_confidential_ai
+        run: |
+          rm -fr build
+          cp ci_certs/bootstrap_crt.txt src/bootstrap_crt.txt
+          cp ci_certs/bootstrap_key.txt src/bootstrap_key.txt
+          cp ci_certs/ca_crt.txt src/ca_crt.txt
+          west build -p always -b mps2_an521_ns -- -DCONFIG_TFM_PROFILE_TYPE_MEDIUM=y
+
+      - name: Build app with isolation level 3
+        working-directory: zephyr_confidential_ai
+        run: |
+          rm -fr build
+          cp ci_certs/bootstrap_crt.txt src/bootstrap_crt.txt
+          cp ci_certs/bootstrap_key.txt src/bootstrap_key.txt
+          cp ci_certs/ca_crt.txt src/ca_crt.txt
+          west build -p always -b mps2_an521_ns -- -DCONFIG_TFM_PROFILE_TYPE_LARGE=y
 
       - name: Test
         working-directory: zephyr_confidential_ai
