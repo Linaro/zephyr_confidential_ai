@@ -6,6 +6,8 @@
 #include "tfm_huk_deriv_srv.h"
 #include "nv_ps_counters.h"
 
+#define LABEL_BUFF_SIZE 40
+
 /* To verify CSR ASN.1 tag and length of the payload */
 static psa_status_t tfm_huk_csr_verify(unsigned char *csr_data,
 				       size_t csr_len, int tag)
@@ -285,8 +287,8 @@ static psa_status_t tfm_huk_deriv_ec_key(const uint8_t *rx_label,
 	size_t ec_priv_key_data_len = 0;
 	huk_key_idx_t idx;
 	huk_key_stat_t stat;
-	uint8_t label_hi[40] = { 0 };
-	uint8_t label_lo[40] = { 0 };
+	uint8_t label_hi[LABEL_BUFF_SIZE] = { 0 };
+	uint8_t label_lo[LABEL_BUFF_SIZE] = { 0 };
 
 	status = tfm_huk_key_get_idx(key_id, &idx);
 	if (status != PSA_SUCCESS) {
@@ -302,11 +304,23 @@ static psa_status_t tfm_huk_deriv_ec_key(const uint8_t *rx_label,
 		return PSA_SUCCESS;
 	}
 
-	/* Add LABEL_HI to rx_label to create label_hi. */
-	sprintf((char *)label_hi, "%s%s", rx_label, LABEL_HI);
+	if (LABEL_BUFF_SIZE > (strlen((char *)rx_label) + strlen(LABEL_HI))) {
+		/* Add LABEL_HI to rx_label to create label_hi. */
+		strcpy((char *)label_hi, (char *)rx_label);
+		strcat((char *)label_hi, LABEL_HI);
+	} else {
+		log_err_print("Insufficient memory to store label");
+		return PSA_ERROR_INSUFFICIENT_MEMORY;
+	}
 
-	/* Add LABEL_LO to rx_label to create label_lo. */
-	sprintf((char *)label_lo, "%s%s", rx_label, LABEL_LO);
+	if (LABEL_BUFF_SIZE > (strlen((char *)rx_label) + strlen(LABEL_LO))) {
+		/* Add LABEL_LO to rx_label to create label_lo. */
+		strcpy((char *)label_lo, (char *)rx_label);
+		strcat((char *)label_lo, LABEL_LO);
+	} else {
+		log_err_print("Insufficient memory to store label");
+		return PSA_ERROR_INSUFFICIENT_MEMORY;
+	}
 
 	/* For MPS2 AN521 platform, TF-M always returns a 16-byte sample key
 	 * as the HUK derived key. But the size of EC private key is 32-bytes.
@@ -632,11 +646,16 @@ static psa_status_t tfm_huk_gen_uuid(psa_msg_t *msg)
 	size_t uuid_length;
 	static uint8_t uuid_encoded[37] = { 0 };
 	uint8_t uuid[16] = { 0 };
-	uint8_t uuid_label[32] = { 0 };
+	uint8_t uuid_label[LABEL_BUFF_SIZE] = { 0 };
 	static uint8_t is_uuid_generated = 0;
 
 	/* Populate uuid_label from label macro. */
-	sprintf((char *)uuid_label, "%s", LABEL_UUID);
+	if (LABEL_BUFF_SIZE > strlen(LABEL_UUID)) {
+		strcpy((char *)uuid_label, LABEL_UUID);
+	} else {
+		log_err_print("Insufficient memory to store label");
+		return PSA_ERROR_INSUFFICIENT_MEMORY;
+	}
 
 	if (!is_uuid_generated) {
 		status = tfm_huk_deriv_unique_key(uuid,
