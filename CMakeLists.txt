@@ -68,7 +68,9 @@ if(CONFIG_APP_NETWORKING)
   list(APPEND secure_app_files
     src/azure.c
     src/bootstrap.c
-    src/dhcpwait.c
+    src/network/dhcpwait.c
+    src/network/sntp_client.c
+    src/network/netmon_mgmt.c
   )
 endif()
 

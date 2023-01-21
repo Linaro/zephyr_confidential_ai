@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Linaro Limited
+ * Copyright (c) 2022-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -37,6 +37,11 @@ void await_dhcp(void)
 	k_mutex_unlock(&dhcp_lock);
 }
 
+bool is_dhcp_up()
+{
+	return dhcp_running;
+}
+
 /* DHCP renewal doesn't generate an event, so this worker is needed to
  * poll the network status.
  */
@@ -63,8 +68,8 @@ end:
 	k_work_reschedule(&check_network_conn, K_SECONDS(3));
 }
 
-static void l4_event_handler(struct net_mgmt_event_callback *cb,
-			     uint32_t mgmt_event, struct net_if *iface)
+static void l4_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+			     struct net_if *iface)
 {
 	if ((mgmt_event & L4_EVENT_MASK) != mgmt_event) {
 		return;
@@ -80,7 +85,7 @@ static void l4_event_handler(struct net_mgmt_event_callback *cb,
 	if (mgmt_event == NET_EVENT_L4_DISCONNECTED) {
 		/* Stop the connection. */
 		k_work_cancel_delayable(&check_network_conn);
-
+		dhcp_running = false;
 		return;
 	}
 }
@@ -92,7 +97,6 @@ void init_dhcp_wait(void)
 {
 	k_work_init_delayable(&check_network_conn, check_network_connection);
 
-	net_mgmt_init_event_callback(&l4_mgmt_cb, l4_event_handler,
-				     L4_EVENT_MASK);
+	net_mgmt_init_event_callback(&l4_mgmt_cb, l4_event_handler, L4_EVENT_MASK);
 	net_mgmt_add_event_callback(&l4_mgmt_cb);
 }
