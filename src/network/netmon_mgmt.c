@@ -8,6 +8,7 @@
 #include <zephyr/logging/log.h>
 #include "sntp_client.h"
 #include "dhcpwait.h"
+#include "netmon_stats.h"
 
 LOG_MODULE_REGISTER(netmon_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -26,6 +27,7 @@ static void netmon_mgmt_time_sync(struct k_work *work)
 		return;
 	}
 	sntp_resync_time();
+	netmon_sntp_time_sync_call_stats(get_netmon_stats_inst());
 
 	/* Reschedule the worker therad to resync the time base with SNTP server. */
 	k_work_reschedule(&time_sync, K_HOURS(24));
@@ -40,6 +42,8 @@ void netmon_mgmt_sntp_init()
 /* Network monitor management thread */
 void netmon_mgmt_thread(void)
 {
+	/* Initialize the netmon stats */
+	netmon_stats_init();
 	/* Wait for the network interface to be up. */
 	LOG_INF("Netmon: waiting for network...");
 	await_dhcp();
@@ -52,8 +56,9 @@ void netmon_mgmt_thread(void)
 		} else {
 			/* TO handle network down */
 			k_work_cancel_delayable(&time_sync);
-			// TODO implementation to log any critical events
+			netmon_dhcp_stats(false, get_netmon_stats_inst());
 			await_dhcp();
+			netmon_dhcp_stats(true, get_netmon_stats_inst());
 			// TODO TLS re-intialization
 			k_work_reschedule(&time_sync, K_SECONDS(1));
 		}

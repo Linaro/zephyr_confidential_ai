@@ -8,6 +8,7 @@
 #include <zephyr/posix/time.h>
 #include <zephyr/posix/sys/time.h>
 #include "sntp_client.h"
+#include "netmon_stats.h"
 
 LOG_MODULE_REGISTER(sntp_client, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -40,6 +41,9 @@ int sntp_client_get_time(time_t *sec)
 	}
 
 	*sec = sntp_time.seconds;
+
+	/* Increment the sntp time req stats counter */
+	netmon_sntp_time_req_count_stats(get_netmon_stats_inst());
 
 	return ret;
 }
