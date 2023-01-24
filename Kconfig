@@ -80,4 +80,13 @@ config SNTP_INIT_SERVER
 	help
 	  SNTP server to request the current time
 
+config NETMON_STATS
+	bool "Enabling support for netmon stats"
+	select STATS
+	depends on NETWORKING
+	depends on APP_NETWORKING
+	default false
+	help
+	  Enable this to add support for netmon stats
+
 source "Kconfig.zephyr"
