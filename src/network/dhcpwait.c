@@ -15,9 +15,13 @@ LOG_MODULE_DECLARE(app, CONFIG_LOG_DEFAULT_LEVEL);
 static K_MUTEX_DEFINE(dhcp_lock);
 static K_CONDVAR_DEFINE(dhcp_cond);
 
-/* The above protect this variable, which indicates if networking is
- * available. */
-static bool dhcp_running;
+#define DHCP_RUN_STATE_ATOMIC_BIT_POSITION 0
+#define DHCP_RUN_STATE_ATOMIC_NUM_BITS	   1
+
+/* The network status atomic variable is used for finding the network condition,
+ * which can be read and modified by threads in an uninterruptible manner.
+ */
+ATOMIC_DEFINE(dhcp_running, DHCP_RUN_STATE_ATOMIC_NUM_BITS);
 
 /* Worker for handling the networking events. */
 static struct k_work_delayable check_network_conn;
@@ -31,7 +35,7 @@ static struct net_mgmt_event_callback l4_mgmt_cb;
 void await_dhcp(void)
 {
 	k_mutex_lock(&dhcp_lock, K_FOREVER);
-	while (!dhcp_running) {
+	while (!atomic_test_bit(dhcp_running, DHCP_RUN_STATE_ATOMIC_BIT_POSITION)) {
 		k_condvar_wait(&dhcp_cond, &dhcp_lock, K_FOREVER);
 	}
 	k_mutex_unlock(&dhcp_lock);
@@ -39,7 +43,7 @@ void await_dhcp(void)
 
 bool is_dhcp_up()
 {
-	return dhcp_running;
+	return atomic_test_bit(dhcp_running, DHCP_RUN_STATE_ATOMIC_BIT_POSITION);
 }
 
 /* DHCP renewal doesn't generate an event, so this worker is needed to
@@ -57,7 +61,7 @@ static void check_network_connection(struct k_work *work)
 	if (iface->config.dhcpv4.state == NET_DHCPV4_BOUND) {
 		/* Wake anyone waiting for network availability */
 		k_mutex_lock(&dhcp_lock, K_FOREVER);
-		dhcp_running = true;
+		atomic_set_bit(dhcp_running, DHCP_RUN_STATE_ATOMIC_BIT_POSITION);
 		k_condvar_broadcast(&dhcp_cond);
 		k_mutex_unlock(&dhcp_lock);
 		return;
@@ -85,7 +89,7 @@ static void l4_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_e
 	if (mgmt_event == NET_EVENT_L4_DISCONNECTED) {
 		/* Stop the connection. */
 		k_work_cancel_delayable(&check_network_conn);
-		dhcp_running = false;
+		atomic_clear_bit(dhcp_running, DHCP_RUN_STATE_ATOMIC_BIT_POSITION);
 		return;
 	}
 }
