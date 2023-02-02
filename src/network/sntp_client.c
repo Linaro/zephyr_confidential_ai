@@ -26,7 +26,7 @@ int sntp_client_get_time(time_t *sec)
 
 	LOG_INF("Sending SNTP request for current time:");
 
-	ret = sntp_simple(CONFIG_SNTP_INIT_SERVER, SYS_FOREVER_MS, &sntp_time);
+	ret = sntp_simple(CONFIG_SNTP_SERVER, SYS_FOREVER_MS, &sntp_time);
 	if (ret < 0) {
 		LOG_ERR("Failed to SNTP current time: %d", ret);
 		return ret;

@@ -74,7 +74,7 @@ config NETMON_STACK_SIZE
 	help
 	  Size of the stack to be used by the netmon worker thread.
 
-config SNTP_INIT_SERVER
+config SNTP_SERVER
 	string "SNTP server config to use"
 	default "time.google.com"
 	help
