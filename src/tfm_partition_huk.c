@@ -45,32 +45,54 @@ psa_status_t psa_huk_get_pubkey(psa_key_id_t *key_id,
 }
 
 psa_status_t psa_huk_ec_key_stat(psa_key_id_t *key_id,
-				 enum km_key_stat *stat)
+				 enum km_key_stat *stat,
+				 _Bool set_status)
 {
 	psa_status_t status;
 	psa_handle_t handle;
 
-	psa_invec in_vec[] = {
-		{ .base = key_id, .len = sizeof(psa_key_id_t) },
-	};
+	if (set_status) {
+		psa_invec in_vec[] = {
+			{ .base = key_id, .len = sizeof(psa_key_id_t) },
+			{ .base = &set_status, .len = sizeof(set_status) },
+			{ .base = stat, .len = sizeof(enum km_key_stat) },
+		};
 
-	psa_outvec out_vec[] = {
-		{ .base = stat, .len = sizeof(enum km_key_stat) },
-	};
+		handle = psa_connect(TFM_HUK_EC_KEY_STAT_SID,
+				     TFM_HUK_EC_KEY_STAT_VERSION);
+		if (!PSA_HANDLE_IS_VALID(handle)) {
+			return PSA_HANDLE_TO_ERROR(handle);
+		}
 
-	handle = psa_connect(TFM_HUK_EC_KEY_STAT_SID,
-			     TFM_HUK_EC_KEY_STAT_VERSION);
-	if (!PSA_HANDLE_IS_VALID(handle)) {
-		return PSA_HANDLE_TO_ERROR(handle);
+		status = psa_call(handle,
+				  PSA_IPC_CALL,
+				  in_vec,
+				  IOVEC_LEN(in_vec),
+				  NULL,
+				  0);
+	} else {
+		psa_invec in_vec[] = {
+			{ .base = key_id, .len = sizeof(psa_key_id_t) },
+			{ .base = &set_status, .len = sizeof(set_status) },
+		};
+
+		psa_outvec out_vec[] = {
+			{ .base = stat, .len = sizeof(enum km_key_stat) },
+		};
+
+		handle = psa_connect(TFM_HUK_EC_KEY_STAT_SID,
+				     TFM_HUK_EC_KEY_STAT_VERSION);
+		if (!PSA_HANDLE_IS_VALID(handle)) {
+			return PSA_HANDLE_TO_ERROR(handle);
+		}
+
+		status = psa_call(handle,
+				  PSA_IPC_CALL,
+				  in_vec,
+				  IOVEC_LEN(in_vec),
+				  out_vec,
+				  IOVEC_LEN(out_vec));
 	}
-
-	status = psa_call(handle,
-			  PSA_IPC_CALL,
-			  in_vec,
-			  IOVEC_LEN(in_vec),
-			  out_vec,
-			  IOVEC_LEN(out_vec));
-
 	psa_close(handle);
 
 	return status;

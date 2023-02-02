@@ -229,6 +229,22 @@ static psa_status_t tfm_huk_key_get_status(huk_key_idx_t idx, huk_key_stat_t *st
 	return PSA_SUCCESS;
 }
 
+static psa_status_t tfm_huk_key_set_status(huk_key_idx_t idx, huk_key_stat_t stat)
+{
+	if ((idx < HUK_KEY_COSE) || (idx >= HUK_KEY_COUNT)) {
+		return PSA_ERROR_INVALID_ARGUMENT;
+	}
+
+	huk_key_context_t *ctx = tfm_huk_get_context(idx);
+
+	if (ctx == NULL) {
+		return PSA_ERROR_INVALID_ARGUMENT;
+	}
+
+	ctx->status = stat;
+	return PSA_SUCCESS;
+}
+
 static psa_status_t tfm_huk_key_handle_get(psa_key_id_t key_id, psa_key_handle_t *handle)
 {
 	huk_key_idx_t idx;
@@ -254,24 +270,37 @@ static psa_status_t tfm_huk_ec_key_status(psa_msg_t *msg)
 	huk_key_idx_t idx;
 	huk_key_stat_t stat;
 	psa_status_t status = PSA_SUCCESS;
+	_Bool set_sts = false;
 
 	/* Check size of invec parameters */
 	if (msg->in_size[0] != sizeof(psa_key_id_t)) {
 		return PSA_ERROR_PROGRAMMER_ERROR;
 	}
 	psa_read(msg->handle, 0, &key_id, msg->in_size[0]);
+	psa_read(msg->handle, 1, &set_sts, msg->in_size[1]);
 
 	status = tfm_huk_key_get_idx(key_id, &idx);
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
+	if (set_sts) {
+		psa_read(msg->handle, 2, &stat, msg->in_size[2]);
+		if(stat != HUK_X_509_CERT_GEN){
+			return PSA_ERROR_INVALID_ARGUMENT;
+		}
 
-	status = tfm_huk_key_get_status(idx, &stat);
-	if (status != PSA_SUCCESS) {
-		return status;
+		status = tfm_huk_key_set_status(idx, stat);
+		if (status != PSA_SUCCESS) {
+			return status;
+		}
+	} else {
+		status = tfm_huk_key_get_status(idx, &stat);
+		if (status != PSA_SUCCESS) {
+			return status;
+		}
+		psa_write(msg->handle, 0, &stat, sizeof(huk_key_stat_t));
 	}
 
-	psa_write(msg->handle, 0, &stat, sizeof(huk_key_stat_t));
 	return status;
 }
 

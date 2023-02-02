@@ -55,7 +55,7 @@ void km_context_init(struct km_key_context *ctx,
 	case KEY_ID_COSE:
 		/* Get the key status from the secure service. */
 		status = al_psa_status(
-			psa_huk_ec_key_stat(&ctx->key_id, &stat),
+			psa_huk_ec_key_stat(&ctx->key_id, &stat, false),
 			__func__);
 		if (status != PSA_SUCCESS) {
 			LOG_ERR("Failed to get the key status with %d\n", status);

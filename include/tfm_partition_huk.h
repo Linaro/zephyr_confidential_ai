@@ -31,13 +31,15 @@ psa_status_t psa_huk_get_pubkey(psa_key_id_t *key_id,
 /**
  * \brief Get the EC key status from HUK EC key status secure service
  *
- * \param[in] key_id    EC key id for persistent key
- * \param[in] stat      Pointer to the buffer to store the key status
+ * \param[in] key_id     EC key id for persistent key
+ * \param[in] stat       Pointer to the buffer to store the key status
+ * \param[in] set_status Boolean value to select a set/get the key status.
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
 psa_status_t psa_huk_ec_key_stat(psa_key_id_t *key_id,
-				 enum km_key_stat *stat);
+				 enum km_key_stat *stat,
+				 _Bool set_status);
 
 /**
  * \brief Get the UUID from HUK generate UUID service
