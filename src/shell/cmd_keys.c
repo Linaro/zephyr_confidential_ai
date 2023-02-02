@@ -23,7 +23,7 @@ static int
 cmd_keys_key_stat(const struct shell *shell, size_t argc, char **argv)
 {
 	char *row1[] = { "Key", "Key ID", "Status" };
-	char *k_sts[] = { "unknown", "Key generated", "X.509 certificate gen" };
+	char *k_sts[] = { "unknown", "Key generated", "X.509 cert gen" };
 
 	shell_print(shell, "| %-24s| %-8s | %-14s |", row1[0], row1[1],
 		    row1[2]);
