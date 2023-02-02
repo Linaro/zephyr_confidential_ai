@@ -135,4 +135,14 @@ psa_status_t km_enc_pubkey_der(const enum km_key_idx key_idx,
 			       unsigned char *public_key,
 			       size_t public_key_size,
 			       size_t *public_key_len);
+
+/**
+ * @brief Set the key status.
+ *
+ * @param key_idx  Key context index.
+ * @param sts      Set status on the key context.
+ *
+ */
+void km_set_key_status(enum km_key_idx idx,
+                       enum km_key_stat sts);
 #endif /* KEY_MGMT_H */

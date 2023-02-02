@@ -265,6 +265,34 @@ struct km_key_context *km_get_context(enum km_key_idx key_idx)
 	return &k_ctx[key_idx];
 }
 
+void km_set_key_status(enum km_key_idx idx, enum km_key_stat status)
+{
+	struct km_key_context *ctx = km_get_context(idx);
+	psa_status_t sts;
+
+	assert(ctx != NULL);
+	assert(status == KEY_X_509_CERT_GEN);
+
+	switch (ctx->key_id) {
+	case KEY_ID_CLIENT_TLS:
+		ctx->status = status;
+		break;
+	case KEY_ID_COSE:
+		/* Get the key status from the secure service. */
+		sts = al_psa_status(psa_huk_ec_key_stat(&ctx->key_id, &status, true), __func__);
+		if (sts != PSA_SUCCESS) {
+			LOG_ERR("Failed to set the key status with %d\n", sts);
+			assert(true);
+		} else {
+			ctx->status = status;
+		}
+		break;
+	default:
+		LOG_ERR("Invalid key ID");
+		assert(true);
+	}
+}
+
 void km_keys_init(void)
 {
 	struct km_key_context *ctx = km_get_context(KEY_CLIENT_TLS);
