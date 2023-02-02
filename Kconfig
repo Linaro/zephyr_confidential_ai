@@ -89,4 +89,10 @@ config NETMON_STATS
 	help
 	  Enable this to add support for netmon stats
 
+config NETMON_SNTP_RESYNC_TIMEBASE
+	int "Duration in hours for the net mon worker thread to resync the time with the SNTP server."
+	default 24
+	help
+	  Duration in hours for the net mon worker thread to resync the time with the SNTP server.
+
 source "Kconfig.zephyr"

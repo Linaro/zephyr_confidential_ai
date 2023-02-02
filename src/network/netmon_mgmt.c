@@ -20,7 +20,6 @@ static struct k_work_delayable time_sync;
  */
 static void netmon_mgmt_time_sync(struct k_work *work)
 {
-
 	if (!is_dhcp_up()) {
 		LOG_ERR("Network down");
 		k_work_cancel_delayable(&time_sync);
@@ -30,13 +29,13 @@ static void netmon_mgmt_time_sync(struct k_work *work)
 	netmon_sntp_time_sync_call_stats(get_netmon_stats_inst());
 
 	/* Reschedule the worker therad to resync the time base with SNTP server. */
-	k_work_reschedule(&time_sync, K_HOURS(24));
+	k_work_reschedule(&time_sync, K_HOURS(CONFIG_NETMON_SNTP_RESYNC_TIMEBASE));
 }
 
 void netmon_mgmt_sntp_init()
 {
 	sntp_client_init();
-	k_work_reschedule(&time_sync, K_HOURS(24));
+	k_work_reschedule(&time_sync, K_HOURS(CONFIG_NETMON_SNTP_RESYNC_TIMEBASE));
 }
 
 /* Network monitor management thread */
@@ -45,8 +44,9 @@ void netmon_mgmt_thread(void)
 	/* Initialize the netmon stats */
 	netmon_stats_init();
 	/* Wait for the network interface to be up. */
-	LOG_INF("Netmon: waiting for network...");
+	LOG_INF("Waiting for network...");
 	await_dhcp();
+	netmon_dhcp_stats(true, get_netmon_stats_inst());
 	k_work_init_delayable(&time_sync, netmon_mgmt_time_sync);
 	netmon_mgmt_sntp_init();
 	/* Start a network monitoring. */
@@ -59,7 +59,7 @@ void netmon_mgmt_thread(void)
 			netmon_dhcp_stats(false, get_netmon_stats_inst());
 			await_dhcp();
 			netmon_dhcp_stats(true, get_netmon_stats_inst());
-			// TODO TLS re-intialization
+			/* TODO TLS re-intialization */
 			k_work_reschedule(&time_sync, K_SECONDS(1));
 		}
 	}
