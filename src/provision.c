@@ -38,6 +38,7 @@ int provision_store(const struct provision_data *prov)
 		}
 
 		prov_present |= PROVISION_TLS_CERT;
+		km_set_key_status(KEY_CLIENT_TLS, KEY_X_509_CERT_GEN);
 	}
 
 	if ((prov->present & PROVISION_COSE_CERT) != 0) {
@@ -50,6 +51,7 @@ int provision_store(const struct provision_data *prov)
 		}
 
 		prov_present |= PROVISION_COSE_CERT;
+		km_set_key_status(KEY_COSE, KEY_X_509_CERT_GEN);
 	}
 
 	if ((prov->present & PROVISION_HUBNAME) != 0) {
