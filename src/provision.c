@@ -19,7 +19,7 @@ static K_CONDVAR_DEFINE(prov_cond);
  * the items on first attemp, and read them from PS if possible.
  */
 
-static enum provision_present prov_present;
+static enum provision_present prov_present = PROVISION_NOT_DONE;
 
 int provision_store(const struct provision_data *prov)
 {
@@ -38,6 +38,18 @@ int provision_store(const struct provision_data *prov)
 		}
 
 		prov_present |= PROVISION_TLS_CERT;
+	}
+
+	if ((prov->present & PROVISION_COSE_CERT) != 0) {
+		pres = psa_ps_set(APP_PS_COSE_CERT, prov->cose_cert_der_len, prov->cose_cert_der,
+				  PSA_STORAGE_FLAG_NONE);
+		if (pres < 0) {
+			/* TODO: Better error code here? */
+			rc = -EINVAL;
+			goto unlock_out;
+		}
+
+		prov_present |= PROVISION_COSE_CERT;
 	}
 
 	if ((prov->present & PROVISION_HUBNAME) != 0) {
@@ -64,8 +76,12 @@ int provision_store(const struct provision_data *prov)
 		prov_present |= PROVISION_HUBPORT;
 	}
 
-	/* After writing everything out, we are considered provisioned, so we can tell everyone. */
-	k_condvar_broadcast(&prov_cond);
+	if (prov_present == ALL_PROVISION_DATA) {
+		/* After writing everything out, we are considered provisioned,
+		 * so we can tell everyone.
+		 */
+		k_condvar_broadcast(&prov_cond);
+	}
 
 unlock_out:
 	k_mutex_unlock(&prov_lock);
