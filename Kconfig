@@ -68,4 +68,31 @@ config NV_COUNTER_TRACKER_THRESHOLD_LIMIT
 	help
 	  Threshold limit to write current protected storage-based NV counter value to persistent memory.
 
+config NETMON_STACK_SIZE
+	int "Size of stack for network monitor thread"
+	default 4096
+	help
+	  Size of the stack to be used by the netmon worker thread.
+
+config SNTP_SERVER
+	string "SNTP server config to use"
+	default "time.google.com"
+	help
+	  SNTP server to request the current time
+
+config NETMON_STATS
+	bool "Enabling support for netmon stats"
+	select STATS
+	depends on NETWORKING
+	depends on APP_NETWORKING
+	default false
+	help
+	  Enable this to add support for netmon stats
+
+config NETMON_SNTP_RESYNC_TIMEBASE
+	int "Duration in hours for the net mon worker thread to resync the time with the SNTP server."
+	default 24
+	help
+	  Duration in hours for the net mon worker thread to resync the time with the SNTP server.
+
 source "Kconfig.zephyr"
