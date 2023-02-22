@@ -13,6 +13,7 @@
 #include "key_mgmt.h"
 #include "x509_csr_gen.h"
 #include "util_app_log.h"
+#include "provision.h"
 
 /** Declare a reference to the application logging interface. */
 LOG_MODULE_DECLARE(app, CONFIG_LOG_DEFAULT_LEVEL);
@@ -189,10 +190,9 @@ static int cmd_keys_csr(const struct shell *shell, size_t argc, char **argv)
 #ifdef CONFIG_APP_NETWORKING
 static int cmd_keys_ca(const struct shell *shell, size_t argc, char **argv)
 {
-	shell_print(shell, "argc: %d", argc);
 	if (argc < 2 || strcmp(argv[1], "help") == 0) {
 		shell_print(shell, "Request certificate from bootstrap server for the given key\n");
-		shell_print(shell, "$ %s %s ca <Key ID>\n", argv[-1], argv[0]);
+		shell_print(shell, "$ %s %s <Key ID>\n", argv[-1], argv[0]);
 		shell_print(shell, "Run 'status' for key ID list\n");
 		shell_print(shell, "Example: $ %s %s 5001", argv[-1], argv[0]);
 		return 0;
@@ -262,22 +262,88 @@ static int cmd_keys_ca(const struct shell *shell, size_t argc, char **argv)
 }
 #endif
 
+static int cmd_keys_cert(const struct shell *shell, size_t argc, char **argv)
+{
+	if (argc < 2 || strcmp(argv[1], "help") == 0) {
+		shell_print(shell, "Print x509 certificate on the given key\n");
+		shell_print(shell, "$ %s %s <Key ID>\n", argv[-1], argv[0]);
+		shell_print(shell, "Run 'status' for key ID list\n");
+		shell_print(shell, "Example: $ %s %s 5001", argv[-1], argv[0]);
+		return 0;
+	}
+
+	if (argc > 2) {
+		return shell_com_invalid_arg(shell, argv[2]);
+	}
+
+	/* Validate the Key ID. */
+	uint32_t key_id = strtoul(argv[1], NULL, 16);
+	uint8_t key_idx;
+	bool is_valid_key_id = false;
+	static unsigned char cert_der[1280];
+	unsigned char *cert_pem;
+	size_t out_len;
+	psa_storage_uid_t psa_storage_uid[] = {APP_PS_TLS_CERT, APP_PS_COSE_CERT};
+	psa_status_t status;
+	for (key_idx = 0; key_idx < KEY_COUNT; key_idx++) {
+		struct km_key_context *ctx = km_get_context(key_idx);
+		if (ctx == NULL) {
+			return -EINVAL;
+		}
+
+		if (ctx->key_id == key_id) {
+			if (ctx->status != KEY_X_509_CERT_GEN) {
+				return shell_com_rc_code(
+					shell, "The requested key does not have a certificate", -1);
+			}
+			is_valid_key_id = true;
+			break;
+		}
+	}
+
+	if (!is_valid_key_id) {
+		return shell_com_invalid_arg(shell, argv[1]);
+	}
+
+	/* Retrieve the certificate from secure storage. */
+	status = al_psa_status(
+		psa_ps_get(psa_storage_uid[key_idx], 0, sizeof(cert_der), cert_der, &out_len),
+		__func__);
+	if (status != PSA_SUCCESS) {
+		return shell_com_rc_code(shell, "Failed to get the certificate", status);
+	}
+
+	cert_pem = &cert_der[out_len] + 1;
+
+	/* Convert cert from DER to PEM format using MbedTLS */
+	if ((status = mbedtls_pem_write_buffer(
+		     "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n", cert_der,
+		     out_len, cert_pem, (sizeof(cert_der) - out_len), &out_len)) != 0) {
+		return shell_com_rc_code(shell, "Failed to convert the cert to PEM", status);
+	}
+
+	shell_print(shell, "%s", cert_pem);
+
+	return 0;
+}
+
 /* Subcommand array for "keys" (level 1). */
-SHELL_STATIC_SUBCMD_SET_CREATE(sub_cmd_keys,
-			       /* 'Status' command handler. */
-			       SHELL_CMD(status, NULL, "Device keys status", cmd_keys_key_stat),
-			       /* 'Public key' command handler. */
-			       SHELL_CMD(public, NULL, "List public key(s) and key IDs",
-					 cmd_keys_pubkey),
-			       /* 'CSR' command handler. */
-			       SHELL_CMD(csr, NULL, "Generate and display CSR on given key ID",
-					 cmd_keys_csr),
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	sub_cmd_keys,
+	/* 'Status' command handler. */
+	SHELL_CMD(status, NULL, "Device keys status", cmd_keys_key_stat),
+	/* 'Public key' command handler. */
+	SHELL_CMD(public, NULL, "List public key(s) and key IDs", cmd_keys_pubkey),
+	/* 'CSR' command handler. */
+	SHELL_CMD(csr, NULL, "Generate and display CSR on given key ID", cmd_keys_csr),
 #ifdef CONFIG_APP_NETWORKING
-			       /* 'CA' command handler. */
-			       SHELL_CMD(ca, NULL, "Request certificate from CA", cmd_keys_ca),
+	/* 'CA' command handler. */
+	SHELL_CMD(ca, NULL, "Request certificate from CA", cmd_keys_ca),
 #endif
-			       /* Array terminator. */
-			       SHELL_SUBCMD_SET_END);
+	/* 'Cert' command handler. */
+	SHELL_CMD(cert, NULL, "Print x509 certificate on given Key ID", cmd_keys_cert),
+	/* Array terminator. */
+	SHELL_SUBCMD_SET_END);
 
 /* Root command "keys" (level 0). */
 SHELL_CMD_REGISTER(keys, &sub_cmd_keys, "Key Management", NULL);
