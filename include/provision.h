@@ -33,9 +33,14 @@ extern "C" {
  */
 #define APP_PS_HUBPORT (APP_PS_BASE + 0x0003)
 
+/** COSE key certificate.  Returned from CA server.
+ */
+#define APP_PS_COSE_CERT (APP_PS_BASE + 0x0004)
+
 /** Enum describing which fields are populated.
  */
 enum provision_present {
+        PROVISION_NOT_DONE = 0,
 	PROVISION_TLS_CERT = 1 << 0,
 	PROVISION_HUBNAME = 1 << 1,
 	PROVISION_HUBPORT = 1 << 2,

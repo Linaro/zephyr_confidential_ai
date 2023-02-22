@@ -182,14 +182,14 @@ static int decode_csr_response(struct provision_data *prov, const uint8_t *buf, 
 		if (res < 0) {
 			return res;
 		}
-		prov->present |= PROVISION_TLS_CERT;
+		prov->present = PROVISION_TLS_CERT;
 		break;
 	case KEY_COSE:
 		res = nanocbor_get_bstr(&map, &prov->cose_cert_der, &prov->cose_cert_der_len);
 		if (res < 0) {
 			return res;
 		}
-		prov->present |= PROVISION_COSE_CERT;
+		prov->present = PROVISION_COSE_CERT;
 		break;
 	case KEY_COUNT:
 		break;
