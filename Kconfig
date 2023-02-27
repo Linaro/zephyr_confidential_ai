@@ -95,4 +95,16 @@ config NETMON_SNTP_RESYNC_TIMEBASE
 	help
 	  Duration in hours for the net mon worker thread to resync the time with the SNTP server.
 
+config CERT_MGMT_STACK_SIZE
+	int "Size of stack for certificate management thread"
+	default 4096
+	help
+	  Size of stack for certificate management thread.
+
+config CERT_REVALIDATE_IN_DAYS
+	int "Initiate the revalidation of the certificate in days."
+	default 10
+	help
+	  Initiate the revalidation of the certificate in days.
+
 source "Kconfig.zephyr"
