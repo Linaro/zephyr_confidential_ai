@@ -6,6 +6,7 @@
 
 #include <zephyr/net/sntp.h>
 #include <time.h>
+#include <mbedtls/platform_time.h>
 
 /**
  * @brief Initialize the SNTP client and
@@ -26,3 +27,11 @@ void sntp_resync_time();
  * management structure.
  */
 void get_current_date_time(struct tm *info);
+
+/**
+ * @brief Check the SNTP client initialization.
+ *
+ * @return True if the SNTP client is initialized.
+ *         False if the SNTP client is not initialized.
+ */
+bool is_sntp_init_done();
