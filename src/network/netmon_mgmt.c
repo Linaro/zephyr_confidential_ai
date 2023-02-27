@@ -66,4 +66,4 @@ void netmon_mgmt_thread(void)
 }
 
 K_THREAD_DEFINE(netmon_mgmt, CONFIG_NETMON_STACK_SIZE, netmon_mgmt_thread, NULL, NULL, NULL,
-		NETMON_THREAD_PRIORITY, 0, 500);
+		NETMON_THREAD_PRIORITY, 0, 0);
