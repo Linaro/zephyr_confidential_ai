@@ -438,6 +438,7 @@ dependencies = [
  "log",
  "p256",
  "pem",
+ "rand_core",
  "ring",
  "serde",
  "serde_json",
