@@ -28,9 +28,9 @@ static struct k_work_delayable cert_revalidate;
 /* Semaphore waiting for command to start process. */
 static K_SEM_DEFINE(cert_mgmt_thread_sem, 0, 1);
 
-/* Device provisioning does connect to the bootstrap server with a specific key id CSR request to
- * register the device's public part of the key with the bootstrap server CA and obtain a signed
- * x509 certificate for the desired device key id.
+/* Device provisioning requires connecting to the bootstrap server, and sending a CSR for the key.
+ * The device's public key is then registered with the bootstrap server/CA, and we obtain an X.509
+ * certificate signed by the CA for the specified key id.
  */
 static int cert_mgmt_do_prov_cert(enum km_key_type key_id)
 {

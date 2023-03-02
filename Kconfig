@@ -102,9 +102,9 @@ config CERT_MGMT_STACK_SIZE
 	  Size of stack for certificate management thread.
 
 config CERT_REVALIDATE_IN_DAYS
-	int "Initiate the revalidation of the certificate in days."
+	int "Frequency (in days) to evaluate certificates for renewal."
 	default 10
 	help
-	  Initiate the revalidation of the certificate in days.
+	  How frequently (in days) to check if certificates need to be renewed.
 
 source "Kconfig.zephyr"
