@@ -23,7 +23,11 @@ extern "C" {
 
 /** Device certificate.  Returned from CA server.
  */
-#define APP_PS_TLS_CERT (APP_PS_BASE + 0x0001)
+#define APP_PS_TLS_CERT (APP_PS_BASE)
+
+/** COSE key certificate.  Returned from CA server.
+ */
+#define APP_PS_COSE_CERT (APP_PS_BASE + 0x0001)
 
 /** MQTT Broker hub name.  Stored as a string.
  */
@@ -32,10 +36,6 @@ extern "C" {
 /** MQTT Broker port.  Stored as a uint16_t.
  */
 #define APP_PS_HUBPORT (APP_PS_BASE + 0x0003)
-
-/** COSE key certificate.  Returned from CA server.
- */
-#define APP_PS_COSE_CERT (APP_PS_BASE + 0x0004)
 
 /** Enum describing which fields are populated.
  */

@@ -52,8 +52,8 @@ list(APPEND secure_app_files
   src/infer_mgmt.c
   src/key_mgmt.c
   src/main.c
-  src/provision.c
-  src/test_certs.c
+  src/certmgr/provision.c
+  src/certmgr/test_certs.c
   src/tfm_partition_huk.c
   src/tfm_partition_tflm.c
   src/tfm_partition_utvm.c
@@ -67,11 +67,12 @@ list(APPEND secure_app_files
 if(CONFIG_APP_NETWORKING)
   list(APPEND secure_app_files
     src/azure.c
-    src/bootstrap.c
+    src/certmgr/bootstrap.c
     src/network/dhcpwait.c
     src/network/sntp_client.c
     src/network/netmon_mgmt.c
     src/network/netmon_stats.c
+    src/certmgr/cert_mgmt.c
   )
 endif()
 

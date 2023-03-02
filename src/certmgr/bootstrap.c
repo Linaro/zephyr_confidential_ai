@@ -209,15 +209,15 @@ static void csr_cb(struct http_response *rsp, enum http_final_call final_data,
 	if (final_data == HTTP_DATA_MORE) {
 		LOG_INF("Partial data %zd bytes", rsp->data_len);
 	} else if (final_data == HTTP_DATA_FINAL) {
-		LOG_INF("All data received %zd bytes", rsp->data_len);
+		LOG_DBG("All data received %zd bytes", rsp->data_len);
 	}
 
-	LOG_INF("Response to req");
-	LOG_INF("Status %s", rsp->http_status);
+	LOG_DBG("Response to req");
+	LOG_DBG("Status %s", rsp->http_status);
 
 	memset(&prov, 0, sizeof(prov));
 	res = decode_csr_response(&prov, rsp->body_frag_start, rsp->content_length, data);
-	LOG_INF("Result: %d", res);
+	LOG_DBG("Result: %d", res);
 
 	if (res >= 0) {
 		/* Provided the provisioning worked, store the information in persistent storage. */
@@ -229,10 +229,10 @@ static void csr_cb(struct http_response *rsp, enum http_final_call final_data,
 
 	switch (data->key_idx) {
 	case KEY_CLIENT_TLS:
-		LOG_HEXDUMP_INF(prov.tls_cert_der, prov.tls_cert_der_len, "TLS Certificate (DER)");
+		LOG_HEXDUMP_DBG(prov.tls_cert_der, prov.tls_cert_der_len, "TLS Certificate (DER)");
 		break;
 	case KEY_COSE:
-		LOG_HEXDUMP_INF(prov.cose_cert_der, prov.cose_cert_der_len, "COSE Certificate (DER)");
+		LOG_HEXDUMP_DBG(prov.cose_cert_der, prov.cose_cert_der_len, "COSE Certificate (DER)");
 		break;
 	case KEY_COUNT:
 		break;
@@ -306,13 +306,13 @@ static void service_cb(struct http_response *rsp, enum http_final_call final_dat
 		LOG_INF("Partial data %zd bytes", rsp->data_len);
 		return;
 	} else if (final_data == HTTP_DATA_FINAL) {
-		LOG_INF("Service data received %zd bytes", rsp->data_len);
+		LOG_DBG("Service data received %zd bytes", rsp->data_len);
 	} else {
 		return;
 	}
 
-	LOG_INF("Content len: %d", (int)rsp->content_length);
-	LOG_HEXDUMP_INF(rsp->body_frag_start, rsp->content_length, "Content");
+	LOG_DBG("Content len: %d", (int)rsp->content_length);
+	LOG_HEXDUMP_DBG(rsp->body_frag_start, rsp->content_length, "Content");
 
 	memset(&prov, 0, sizeof(prov));
 	res = decode_service_response(&prov, rsp->body_frag_start, rsp->content_length);
@@ -470,7 +470,7 @@ static int rest_call(struct bootstrap *ctx, unsigned char *payload, size_t paylo
 	req.header_fields = cbor_header;
 
 	rc = http_client_req(ctx->sock, &req, 5 * MSEC_PER_SEC, cb_data);
-	LOG_INF("Request result: %d", rc);
+	LOG_DBG("Request result: %d", rc);
 
 	return rc < 0 ? rc : 0;
 }

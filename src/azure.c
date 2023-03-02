@@ -155,15 +155,15 @@ static int azure_load_provision(void)
 	buf_len -= count + 1;
 
 	/* Print out what we got to make sure it works. */
-	LOG_HEXDUMP_INF(mqtt_provision.tls_cert_der, mqtt_provision.tls_cert_der_len, "Certificate (DER)");
+	LOG_HEXDUMP_DBG(mqtt_provision.tls_cert_der, mqtt_provision.tls_cert_der_len, "Certificate (DER)");
 
-	LOG_INF("provisioned host: %s, port %d", mqtt_provision.hubname, mqtt_provision.hubport);
-	LOG_INF("our uuid: %s", prov_clientid);
-	LOG_INF("Device Topic: %s", device_topic);
-	LOG_INF("Event Topic: %s", event_topic);
-	LOG_INF("Azure hostname: %s", azure_hostname);
-	LOG_INF("Azure port: %s", azure_port);
-	LOG_INF("Azure user: %s", azure_username);
+	LOG_DBG("Provisioned host: %s, port %d", mqtt_provision.hubname, mqtt_provision.hubport);
+	LOG_DBG("Our uuid: %s", prov_clientid);
+	LOG_DBG("Device Topic: %s", device_topic);
+	LOG_DBG("Event Topic: %s", event_topic);
+	LOG_DBG("Azure hostname: %s", azure_hostname);
+	LOG_DBG("Azure port: %s", azure_port);
+	LOG_DBG("Azure user: %s", azure_username);
 
 	return 0;
 }

@@ -432,7 +432,6 @@ psa_status_t x509_csr_cbor(const enum km_key_idx key_idx,
 	/* The above put the DER encoded packet at the end of the
 	 * buffer. */
 	size_t pos = *csr_cbor_len - ret;
-	printf("cert starts at 0x%x into buffer\n", *csr_cbor_len - ret);
 
 	/* Wrap the data in a single element CBOR array with the DER
 	 * data as a bstr. */
