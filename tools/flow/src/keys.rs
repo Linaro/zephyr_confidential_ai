@@ -2,16 +2,21 @@
 
 use std::collections::BTreeMap;
 
-use aes_gcm::{AeadInPlace, Aes128Gcm, KeyInit, Nonce};
+use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
 use aes_kw::{Kek, KekAes128};
 use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine};
 use coset::{
     cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncryptBuilder,
-    CoseKdfContextBuilder, CoseRecipientBuilder, Header, HeaderBuilder, Label, ProtectedHeader,
-    RegisteredLabelWithPrivate, SuppPubInfo,
+    CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, Header, HeaderBuilder, Label,
+    ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
 };
-use p256::{elliptic_curve::sec1::ToEncodedPoint, PublicKey, SecretKey};
+// use ecdsa::signature::Verifier;
+use p256::{
+    ecdsa::{signature::Verifier, Signature, VerifyingKey},
+    elliptic_curve::sec1::ToEncodedPoint,
+    PublicKey, SecretKey,
+};
 use rand_core::{CryptoRng, OsRng, RngCore};
 
 use crate::{data::Example, Result};
@@ -135,8 +140,10 @@ impl Key {
             .build();
         let ctx = ctxb.to_vec().unwrap();
 
-        let secret =
-            p256::ecdh::diffie_hellman(self.secret_key().unwrap().to_nonzero_scalar(), eph_pub.as_affine());
+        let secret = p256::ecdh::diffie_hellman(
+            self.secret_key().unwrap().to_nonzero_scalar(),
+            eph_pub.as_affine(),
+        );
         let hkdf = secret.extract::<sha2::Sha256>(None);
         let mut hkey = vec![0u8; 16];
         hkdf.expand(&ctx, &mut hkey).unwrap();
@@ -288,6 +295,26 @@ impl Key {
         // println!("Packet: {:#?}", packet);
 
         Ok(packet.to_vec().unwrap())
+    }
+
+    /// Verify the signature on a Cose1 packet, using the current public key.
+    pub fn verify(&self, packet: &CoseSign1) -> Result<()> {
+        packet.verify_signature(&[], |sig, data| {
+            println!("Sig: {:?}", sig);
+            println!("Sig is {} bytes", sig.len());
+            println!("Data: {:?}", data);
+
+            let r = GenericArray::clone_from_slice(&sig[0..32]);
+            let s = GenericArray::clone_from_slice(&sig[32..64]);
+            let sig = Signature::from_scalars(r, s).unwrap();
+
+            let pub_key = self.public_key();
+            let vkey = VerifyingKey::from(&pub_key);
+            match vkey.verify(data, &sig) {
+                Ok(()) => Ok(()),
+                Err(e) => Err(anyhow::anyhow!("Verification failure: {:?}", e)),
+            }
+        })
     }
 }
 

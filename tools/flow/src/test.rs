@@ -3,8 +3,8 @@
 //! These tests use the sample data from the cose examples repo to ensure that we are producing
 //! valid COSE packets.
 
-use crate::keys::Key;
 use crate::data::Example;
+use crate::keys::Key;
 
 use coset::CborSerializable;
 
@@ -29,4 +29,29 @@ fn check_ecdh_wrap() {
 
     // println!("Plain: {:?}", plain);
     assert_eq!(&plain, ex.input.plaintext.as_bytes());
+}
+
+#[test]
+fn check_ecdsa() {
+    let ex = Example::from_json_file("cose-examples/ecdsa-examples/ecdsa-sig-01.json")
+        .expect("Opening example file");
+    // println!("Value: {:#?}", ex);
+
+    let secret = Key::from_example(&ex).expect("Extract keypair from example");
+    println!("Secret: {:?}", secret);
+
+    // Extract the CBOR payload from the example. This is tagged, so make sure
+    // we see the right tag.
+    //
+    // TODO: Try to do this using the cbor library directly, but for now, just
+    // check the bytes.
+    let packet = &ex.output.cbor;
+    if packet.len() < 2 || packet[0] != 0xd2 {
+        panic!("CBOR packet is not properly tagged as COSE_Sign1");
+    }
+    let packet = &packet[1..];
+    let packet = coset::CoseSign1::from_slice(packet).expect("Decoding cbor");
+    // println!("Packet: {:#?}", packet);
+
+    secret.verify(&packet).unwrap();
 }
