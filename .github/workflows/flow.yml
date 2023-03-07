@@ -1,0 +1,20 @@
+# Copyright (c) 2022, Linaro
+# SPDX-License-Identifier: Apache-2.0
+
+on: [push, pull_request]
+
+name: FlowCI
+
+jobs:
+  build_and_test:
+    name: Flow Rust Project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path tools/flow/Cargo.toml
