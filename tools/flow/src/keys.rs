@@ -19,26 +19,34 @@ use crate::{data::Example, Result};
 /// Internal representation of a keypair. This can come from a certificate and
 /// private key file, or can be extracted out of one of the example files.
 #[derive(Debug)]
-pub struct Key {
-    secret: SecretKey,
+pub enum Key {
+    Secret(SecretKey),
 }
 
 impl Key {
     pub fn from_example(example: &Example) -> Result<Key> {
         let secret = decode_key(example.get_keys()[0])?;
-        Ok(Key { secret })
+        Ok(Key::Secret(secret))
     }
 
     /// Construct a fresh keypair, randomly.
     pub fn new(rng: impl CryptoRng + RngCore) -> Result<Key> {
-        Ok(Key {
-            secret: SecretKey::random(rng),
-        })
+        Ok(Key::Secret(SecretKey::random(rng)))
     }
 
     /// Retrieve the public key associated with this Key.
     pub fn public_key(&self) -> PublicKey {
-        self.secret.public_key()
+        match self {
+            Key::Secret(sec) => sec.public_key(),
+        }
+    }
+
+    /// Retrieve the secret key associated with this key. Fails if there is no
+    /// associated secret key.
+    pub fn secret_key(&self) -> Option<&SecretKey> {
+        match self {
+            Key::Secret(sec) => Some(sec),
+        }
     }
 
     /// Decrypt a COSE_Encrypt packet that uses this particular key.
@@ -128,7 +136,7 @@ impl Key {
         let ctx = ctxb.to_vec().unwrap();
 
         let secret =
-            p256::ecdh::diffie_hellman(self.secret.to_nonzero_scalar(), eph_pub.as_affine());
+            p256::ecdh::diffie_hellman(self.secret_key().unwrap().to_nonzero_scalar(), eph_pub.as_affine());
         let hkdf = secret.extract::<sha2::Sha256>(None);
         let mut hkey = vec![0u8; 16];
         hkdf.expand(&ctx, &mut hkey).unwrap();
