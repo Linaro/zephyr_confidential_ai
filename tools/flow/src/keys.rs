@@ -7,9 +7,9 @@ use aes_kw::{Kek, KekAes128};
 use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine};
 use coset::{
-    cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncryptBuilder,
-    CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, CoseSign1Builder, Header,
-    HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo, CoseEncrypt0,
+    cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncrypt0, CoseEncrypt0Builder,
+    CoseEncryptBuilder, CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, CoseSign1Builder,
+    Header, HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
 };
 // use ecdsa::signature::Verifier;
 use p256::{
@@ -365,13 +365,46 @@ impl ContentKey {
         })
     }
 
+    /// Construct a new content key, with random contents.
+    pub fn new(mut rng: impl CryptoRng + RngCore) -> Result<ContentKey> {
+        let mut key = vec![0u8; 16];
+        rng.fill_bytes(&mut key);
+        Ok(ContentKey {
+            cipher: Aes128Gcm::new_from_slice(&key).unwrap(),
+        })
+    }
+
     pub fn decrypt(&self, packet: &CoseEncrypt0) -> Result<Vec<u8>> {
         let nonce = Nonce::from_slice(&packet.unprotected.iv);
         packet.decrypt(&[], |ciphertext, aad| {
             let mut result = ciphertext.to_vec();
-            self.cipher.decrypt_in_place(nonce, aad, &mut result).unwrap();
+            self.cipher
+                .decrypt_in_place(nonce, aad, &mut result)
+                .unwrap();
             Ok(result)
         })
+    }
+
+    pub fn encrypt(&self, plain: &[u8], mut rng: impl CryptoRng + RngCore) -> Result<Vec<u8>> {
+        let mut iv = vec![0u8; 12];
+        rng.fill_bytes(&mut iv);
+        let nonce = Nonce::from_slice(&iv);
+        let packet = CoseEncrypt0Builder::new()
+            .protected(
+                HeaderBuilder::new()
+                    .algorithm(iana::Algorithm::A128GCM)
+                    .build(),
+            )
+            .unprotected(HeaderBuilder::new().iv(iv.clone()).build())
+            .create_ciphertext(plain, &[], |plaintext, aad| {
+                let mut result = plaintext.to_vec();
+                self.cipher
+                    .encrypt_in_place(nonce, aad, &mut result)
+                    .unwrap();
+                result
+            })
+            .build();
+        Ok(packet.to_vec().unwrap())
     }
 }
 
@@ -458,5 +491,19 @@ fn randomsign() {
     // Now verify this signature.
     let packet = CoseSign1::from_slice(&signed).unwrap();
     let message2 = signer.verify(&packet).unwrap();
+    assert_eq!(message2, message);
+}
+
+#[test]
+fn encrypt0() {
+    let secret = ContentKey::new(OsRng).unwrap();
+    let message = b"This is a simple message";
+
+    let encd = secret.encrypt(message, OsRng).unwrap();
+    // println!("Encd: {:?}", encd);
+
+    // Decode the (untagged) packet.
+    let packet = CoseEncrypt0::from_slice(&encd).unwrap();
+    let message2 = secret.decrypt(&packet).unwrap();
     assert_eq!(message2, message);
 }
