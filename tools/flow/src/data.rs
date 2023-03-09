@@ -118,8 +118,14 @@ pub struct Intermediates {
 pub struct IntermediateRecipient {
     // TODO: This should be optional, figure out how to encode an option hex string.
     #[serde(rename = "Context_hex")]
-    #[serde(with = "hex")]
-    pub context: Vec<u8>,
+    // This only works if the content is always present, which isn't the case
+    // with encrypt0, this can be put back for debugging, or just left as is.
+    // Ideally, we would write a module to implement optionalhex and use that
+    // here.
+    // #[serde(with = "hex")]
+    // pub context: Vec<u8>,
+    pub context: Option<String>,
+
     #[serde(rename = "Secret_hex")]
     pub secret: Option<String>,
 }
