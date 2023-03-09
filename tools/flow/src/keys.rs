@@ -8,18 +8,21 @@ use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine};
 use coset::{
     cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncryptBuilder,
-    CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, Header, HeaderBuilder, Label,
-    ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
+    CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, CoseSign1Builder, Header,
+    HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
 };
 // use ecdsa::signature::Verifier;
 use p256::{
-    ecdsa::{signature::Verifier, Signature, VerifyingKey},
+    ecdsa::{
+        signature::{Signer, Verifier},
+        Signature, SigningKey, VerifyingKey,
+    },
     elliptic_curve::sec1::ToEncodedPoint,
     PublicKey, SecretKey,
 };
 use rand_core::{CryptoRng, OsRng, RngCore};
 
-use crate::{data::Example, Result};
+use crate::{data::Example, pdump::HexDump, Result};
 
 /// Internal representation of a keypair. This can come from a certificate and
 /// private key file, or can be extracted out of one of the example files.
@@ -297,8 +300,39 @@ impl Key {
         Ok(packet.to_vec().unwrap())
     }
 
+    /// Sign this payload, using our key.
+    pub fn sign_cose(&self, payload: &[u8], rng: impl CryptoRng + RngCore) -> Result<Vec<u8>> {
+        // This signing algorithm doesn't need an rng.
+        let _ = rng;
+
+        let prot = HeaderBuilder::new()
+            .algorithm(iana::Algorithm::ES256)
+            .content_type("application/cbor".to_string())
+            .build();
+        let unprot = HeaderBuilder::new()
+            .key_id(b"keyid-placeholder".to_vec())
+            .build();
+
+        let signer = SigningKey::from(self.secret_key().unwrap());
+
+        let packet = CoseSign1Builder::new()
+            .protected(prot)
+            .unprotected(unprot)
+            .payload(payload.to_vec())
+            .create_signature(&[], |message| {
+                println!("Sign");
+                message.dump();
+                let sig: Signature = signer.sign(message);
+                sig.to_vec()
+            })
+            .build();
+        // println!("cose sign: {:#?}", packet);
+
+        Ok(packet.to_vec().unwrap())
+    }
+
     /// Verify the signature on a Cose1 packet, using the current public key.
-    pub fn verify(&self, packet: &CoseSign1) -> Result<()> {
+    pub fn verify<'a>(&self, packet: &'a CoseSign1) -> Result<&'a [u8]> {
         packet.verify_signature(&[], |sig, data| {
             println!("Sig: {:?}", sig);
             println!("Sig is {} bytes", sig.len());
@@ -314,7 +348,8 @@ impl Key {
                 Ok(()) => Ok(()),
                 Err(e) => Err(anyhow::anyhow!("Verification failure: {:?}", e)),
             }
-        })
+        })?;
+        Ok(packet.payload.as_ref().unwrap())
     }
 }
 
@@ -388,4 +423,18 @@ fn randomkey() {
     let packet = CoseEncrypt::from_slice(&cblock).unwrap();
     let plain2 = recip_priv.decrypt_cose(&packet).unwrap();
     assert_eq!(&plain[..], plain2);
+}
+
+#[test]
+fn randomsign() {
+    let signer = Key::new(OsRng).unwrap();
+
+    let message = b"This is a simple message";
+
+    let signed = signer.sign_cose(message, OsRng).unwrap();
+
+    // Now verify this signature.
+    let packet = CoseSign1::from_slice(&signed).unwrap();
+    let message2 = signer.verify(&packet).unwrap();
+    assert_eq!(message2, message);
 }
