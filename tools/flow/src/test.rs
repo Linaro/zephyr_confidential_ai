@@ -4,8 +4,9 @@
 //! valid COSE packets.
 
 use crate::data::Example;
-use crate::keys::Key;
+use crate::keys::{Key, ContentKey};
 
+use base64::{engine::general_purpose, Engine};
 use coset::CborSerializable;
 
 #[test]
@@ -54,4 +55,32 @@ fn check_ecdsa() {
     // println!("Packet: {:#?}", packet);
 
     secret.verify(&packet).unwrap();
+}
+
+#[test]
+fn check_encrypt0() {
+    let ex = Example::from_json_file("cose-examples/aes-gcm-examples/aes-gcm-enc-01.json")
+        .expect("Opening example file");
+    // println!("Value: {:#?}", ex);
+
+    let recip = &ex.get_keys()[0];
+    let key = match recip.get("k") {
+        None => panic!("No decryption key present in encrypt0 example"),
+        Some(text) => general_purpose::URL_SAFE_NO_PAD.decode(text).unwrap(),
+    };
+    let secret = ContentKey::from_slice(&key).unwrap();
+
+    // TODO: Try to do this using the cbor library directly, but for now, just
+    // check the bytes.
+    let packet = &ex.output.cbor;
+    if packet.len() < 2 || packet[0] != 0xd0 {
+        panic!("CBOR packet is not properly tagged as COSE_Encrypt0");
+    }
+    let packet = &packet[1..];
+    let packet = coset::CoseEncrypt0::from_slice(packet).expect("Decoding cbor");
+    // println!("Packet: {:#?}", packet);
+
+    let plain2 = secret.decrypt(&packet).unwrap();
+    // println!("Plaintext: {:?}", plain2);
+    assert_eq!(ex.input.plaintext.as_bytes(), &plain2);
 }

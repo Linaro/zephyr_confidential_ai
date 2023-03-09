@@ -9,7 +9,7 @@ use base64::{engine::general_purpose, Engine};
 use coset::{
     cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncryptBuilder,
     CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, CoseSign1Builder, Header,
-    HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
+    HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo, CoseEncrypt0,
 };
 // use ecdsa::signature::Verifier;
 use p256::{
@@ -350,6 +350,28 @@ impl Key {
             }
         })?;
         Ok(packet.payload.as_ref().unwrap())
+    }
+}
+
+// An AES key.
+pub struct ContentKey {
+    cipher: Aes128Gcm,
+}
+
+impl ContentKey {
+    pub fn from_slice(data: &[u8]) -> Result<ContentKey> {
+        Ok(ContentKey {
+            cipher: Aes128Gcm::new_from_slice(data).unwrap(),
+        })
+    }
+
+    pub fn decrypt(&self, packet: &CoseEncrypt0) -> Result<Vec<u8>> {
+        let nonce = Nonce::from_slice(&packet.unprotected.iv);
+        packet.decrypt(&[], |ciphertext, aad| {
+            let mut result = ciphertext.to_vec();
+            self.cipher.decrypt_in_place(nonce, aad, &mut result).unwrap();
+            Ok(result)
+        })
     }
 }
 

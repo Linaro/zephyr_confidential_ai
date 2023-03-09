@@ -27,6 +27,10 @@ impl Example {
             // Note that despite being sign0, we'll put it into a vec to get
             // consistent handling.
             InputData::Sign1(env) => vec![&env.key],
+
+            // For encrypt0, return the recipient key, where the 'k' is a
+            // base-64 url encoded version of the key used.
+            InputData::Encrypted(env) => env.recipients.iter().map(|e| &e.key).collect(),
         }
     }
 
@@ -63,6 +67,8 @@ pub enum InputData {
     // Yes, this is erroneously called sign0 in the sample data.
     #[serde(rename = "sign0")]
     Sign1(Sign1),
+    #[serde(rename = "encrypted")]
+    Encrypted(Encrypted),
 }
 
 #[allow(dead_code)]
@@ -88,6 +94,13 @@ pub struct Sign1 {
     pub protected: BTreeMap<String, Value>,
     pub unprotected: BTreeMap<String, Value>,
     pub alg: String,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct Encrypted {
+    pub protected: BTreeMap<String, Value>,
+    pub recipients: Vec<Recipient>,
 }
 
 #[allow(dead_code)]
