@@ -455,11 +455,13 @@ impl Key {
 // An AES key.
 pub struct ContentKey {
     cipher: Aes128Gcm,
+    secret_bytes: Vec<u8>,
 }
 
 impl ContentKey {
     pub fn from_slice(data: &[u8]) -> Result<ContentKey> {
         Ok(ContentKey {
+            secret_bytes: data.to_vec(),
             cipher: Aes128Gcm::new_from_slice(data).unwrap(),
         })
     }
@@ -468,8 +470,10 @@ impl ContentKey {
     pub fn new(mut rng: impl CryptoRng + RngCore) -> Result<ContentKey> {
         let mut key = vec![0u8; 16];
         rng.fill_bytes(&mut key);
+        let cipher = Aes128Gcm::new_from_slice(&key).unwrap();
         Ok(ContentKey {
-            cipher: Aes128Gcm::new_from_slice(&key).unwrap(),
+            secret_bytes: key,
+            cipher,
         })
     }
 
@@ -504,6 +508,11 @@ impl ContentKey {
             })
             .build();
         Ok(packet.to_vec().unwrap())
+    }
+
+    // Extract the bytes of the private key from this AES key.
+    pub fn bytes(&self) -> &[u8] {
+        &self.secret_bytes
     }
 }
 
