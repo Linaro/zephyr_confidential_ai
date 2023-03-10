@@ -38,6 +38,7 @@ use crate::{data::Example, pdump::HexDump, Result};
 #[derive(Debug)]
 pub struct Key {
     info: KeyInfo,
+    key_id: String,
 }
 
 /// Internal representation of a keypair. This can come from a certificate and
@@ -49,16 +50,20 @@ pub enum KeyInfo {
 
 impl Key {
     pub fn from_example(example: &Example) -> Result<Key> {
-        let secret = decode_key(example.get_keys()[0])?;
+        let key = example.get_keys()[0];
+        let secret = decode_key(key)?;
+        let key_id = key.get("kid").ok_or_else(|| anyhow!("Key id (kid) not present"))?;
         Ok(Key {
             info: KeyInfo::Secret(secret),
+            key_id: key_id.to_string(),
         })
     }
 
     /// Construct a fresh keypair, randomly.
-    pub fn new(rng: impl CryptoRng + RngCore) -> Result<Key> {
+    pub fn new(rng: impl CryptoRng + RngCore, key_id: &str) -> Result<Key> {
         Ok(Key {
-            info: KeyInfo::Secret(SecretKey::random(rng))
+            info: KeyInfo::Secret(SecretKey::random(rng)),
+            key_id: key_id.to_string(),
         })
     }
 
@@ -484,8 +489,8 @@ pub fn cbor_map_get<'a>(map: &'a [(Value, Value)], key: &Value) -> Option<&'a Va
 
 #[test]
 fn randomkey() {
-    let sender = Key::new(OsRng).unwrap();
-    let recip_priv = Key::new(OsRng).unwrap();
+    let sender = Key::new(OsRng, "sender").unwrap();
+    let recip_priv = Key::new(OsRng, "recipient").unwrap();
     let recip_pub = recip_priv.public_key();
     println!("sender: {:?}", sender);
     println!("recip: {:?}", recip_pub);
@@ -502,7 +507,7 @@ fn randomkey() {
 
 #[test]
 fn randomsign() {
-    let signer = Key::new(OsRng).unwrap();
+    let signer = Key::new(OsRng, "signer").unwrap();
 
     let message = b"This is a simple message";
 
