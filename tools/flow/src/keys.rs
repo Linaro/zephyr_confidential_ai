@@ -35,36 +35,45 @@ use coset::CoseEncrypt;
 
 use crate::{data::Example, pdump::HexDump, Result};
 
+#[derive(Debug)]
+pub struct Key {
+    info: KeyInfo,
+}
+
 /// Internal representation of a keypair. This can come from a certificate and
 /// private key file, or can be extracted out of one of the example files.
 #[derive(Debug)]
-pub enum Key {
+pub enum KeyInfo {
     Secret(SecretKey),
 }
 
 impl Key {
     pub fn from_example(example: &Example) -> Result<Key> {
         let secret = decode_key(example.get_keys()[0])?;
-        Ok(Key::Secret(secret))
+        Ok(Key {
+            info: KeyInfo::Secret(secret),
+        })
     }
 
     /// Construct a fresh keypair, randomly.
     pub fn new(rng: impl CryptoRng + RngCore) -> Result<Key> {
-        Ok(Key::Secret(SecretKey::random(rng)))
+        Ok(Key {
+            info: KeyInfo::Secret(SecretKey::random(rng))
+        })
     }
 
     /// Retrieve the public key associated with this Key.
     pub fn public_key(&self) -> PublicKey {
-        match self {
-            Key::Secret(sec) => sec.public_key(),
+        match &self.info {
+            KeyInfo::Secret(sec) => sec.public_key(),
         }
     }
 
     /// Retrieve the secret key associated with this key. Fails if there is no
     /// associated secret key.
     pub fn secret_key(&self) -> Option<&SecretKey> {
-        match self {
-            Key::Secret(sec) => Some(sec),
+        match &self.info {
+            KeyInfo::Secret(sec) => Some(sec),
         }
     }
 
