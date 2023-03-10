@@ -3,7 +3,7 @@
 // TODO: Temporary until we use these methods in main.
 #![allow(dead_code)]
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::Path};
 
 use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
 use aes_kw::{Kek, KekAes128};
@@ -24,6 +24,7 @@ use p256::{
     PublicKey, SecretKey,
 };
 use rand_core::{CryptoRng, RngCore};
+use x509_parser::{parse_x509_certificate, prelude::parse_x509_pem};
 
 #[cfg(test)]
 use rand_core::OsRng;
@@ -46,13 +47,16 @@ pub struct Key {
 #[derive(Debug)]
 pub enum KeyInfo {
     Secret(SecretKey),
+    Public(PublicKey),
 }
 
 impl Key {
     pub fn from_example(example: &Example) -> Result<Key> {
         let key = example.get_keys()[0];
         let secret = decode_key(key)?;
-        let key_id = key.get("kid").ok_or_else(|| anyhow!("Key id (kid) not present"))?;
+        let key_id = key
+            .get("kid")
+            .ok_or_else(|| anyhow!("Key id (kid) not present"))?;
         Ok(Key {
             info: KeyInfo::Secret(secret),
             key_id: key_id.to_string(),
@@ -67,10 +71,48 @@ impl Key {
         })
     }
 
+    /// Build a keypair (or possibly just a public key) out of a certificate
+    /// file.
+    pub fn from_cert_file<P: AsRef<Path>>(path: P) -> Result<Key> {
+        let cert = std::fs::read(path)?;
+        let (rem, pem) = parse_x509_pem(&cert)?;
+        if !rem.is_empty() {
+            return Err(anyhow!("Trailing garbage in certificate file"));
+        }
+        if pem.label != "CERTIFICATE" {
+            return Err(anyhow!("Certificate file does not contain a CERTIFICATE"));
+        }
+        let (rest, cert) = parse_x509_certificate(&pem.contents)?;
+        if !rest.is_empty() {
+            return Err(anyhow!("Trailing der garbage in certificate file"));
+        }
+        // println!("cert: {:?}", cert);
+
+        // For now, just use the textual version of the subject as the key-id,
+        // we may want to only use some of the fields.
+        let key_id = format!("{}", cert.subject());
+
+        let pubkey = cert.public_key();
+
+        // The raw key:
+        let key = match pubkey.parsed()? {
+            x509_parser::public_key::PublicKey::EC(pt) => {
+                PublicKey::from_sec1_bytes(pt.data()).unwrap()
+            }
+            _ => return Err(anyhow!("Cert public key is not EC key")),
+        };
+
+        Ok(Key {
+            info: KeyInfo::Public(key),
+            key_id,
+        })
+    }
+
     /// Retrieve the public key associated with this Key.
     pub fn public_key(&self) -> PublicKey {
         match &self.info {
             KeyInfo::Secret(sec) => sec.public_key(),
+            KeyInfo::Public(public) => public.clone(),
         }
     }
 
@@ -79,6 +121,7 @@ impl Key {
     pub fn secret_key(&self) -> Option<&SecretKey> {
         match &self.info {
             KeyInfo::Secret(sec) => Some(sec),
+            KeyInfo::Public(_) => None,
         }
     }
 
