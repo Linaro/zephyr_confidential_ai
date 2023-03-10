@@ -9,8 +9,8 @@ use clap::{Parser, Subcommand};
 #[cfg(test)]
 mod test;
 
-mod keys;
 mod data;
+mod keys;
 mod pdump;
 
 type Result<T> = anyhow::Result<T>;
@@ -72,8 +72,8 @@ fn gen() -> Result<()> {
 
     // let certdir = conf.cert_dir();
     // if certdir.exists() {
-        // error!("key directory {:?} alread exists, remove to create new", certdir);
-        // return Err(anyhow!("Command error"));
+    // error!("key directory {:?} alread exists, remove to create new", certdir);
+    // return Err(anyhow!("Command error"));
     // }
     // fs::create_dir(&certdir)?;
 
