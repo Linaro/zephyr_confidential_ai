@@ -35,6 +35,7 @@ impl Example {
     }
 
     /// Load an example from a json file.
+    #[allow(dead_code)]
     pub fn from_json_file<P: AsRef<Path>>(name: P) -> Result<Example> {
         let file = File::open(name)?;
         Ok(serde_json::from_reader(file)?)

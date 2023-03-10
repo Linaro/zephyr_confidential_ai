@@ -1,5 +1,8 @@
 //! Key management
 
+// TODO: Temporary until we use these methods in main.
+#![allow(dead_code)]
+
 use std::collections::BTreeMap;
 
 use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
@@ -7,7 +10,7 @@ use aes_kw::{Kek, KekAes128};
 use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine};
 use coset::{
-    cbor::value::Value, iana, CborSerializable, CoseEncrypt, CoseEncrypt0, CoseEncrypt0Builder,
+    cbor::value::Value, iana, CborSerializable, CoseEncrypt0, CoseEncrypt0Builder,
     CoseEncryptBuilder, CoseKdfContextBuilder, CoseRecipientBuilder, CoseSign1, CoseSign1Builder,
     Header, HeaderBuilder, Label, ProtectedHeader, RegisteredLabelWithPrivate, SuppPubInfo,
 };
@@ -20,7 +23,15 @@ use p256::{
     elliptic_curve::sec1::ToEncodedPoint,
     PublicKey, SecretKey,
 };
-use rand_core::{CryptoRng, OsRng, RngCore};
+use rand_core::{CryptoRng, RngCore};
+
+#[cfg(test)]
+use rand_core::OsRng;
+
+// This isn't right, but leave here to prevent this warning, until we do use
+// this from main.
+#[cfg(test)]
+use coset::CoseEncrypt;
 
 use crate::{data::Example, pdump::HexDump, Result};
 
