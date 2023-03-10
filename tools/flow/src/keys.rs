@@ -3,7 +3,7 @@
 // TODO: Temporary until we use these methods in main.
 #![allow(dead_code)]
 
-use std::{collections::BTreeMap, path::Path};
+use std::{collections::BTreeMap, path::Path, io::ErrorKind};
 
 use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
 use aes_kw::{Kek, KekAes128};
@@ -21,7 +21,7 @@ use p256::{
         Signature, SigningKey, VerifyingKey,
     },
     elliptic_curve::sec1::ToEncodedPoint,
-    PublicKey, SecretKey,
+    PublicKey, SecretKey, pkcs8::DecodePrivateKey,
 };
 use rand_core::{CryptoRng, RngCore};
 use x509_parser::{parse_x509_certificate, prelude::parse_x509_pem};
@@ -71,9 +71,29 @@ impl Key {
         })
     }
 
+    /// If there is a private key file adjacent to this file certificate, try
+    /// reading a private key from it.
+    fn read_private(path: &Path) -> Result<Option<SecretKey>> {
+        // Look for a .pk8 file with the same name stem.
+        let mut pk_file = path.to_path_buf();
+        pk_file.set_extension("pk8");
+
+        let pem = match std::fs::read_to_string(pk_file) {
+            Ok(buf) => buf,
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        let secret = SecretKey::from_pkcs8_pem(&pem).unwrap();
+        Ok(Some(secret))
+    }
+
     /// Build a keypair (or possibly just a public key) out of a certificate
     /// file.
     pub fn from_cert_file<P: AsRef<Path>>(path: P) -> Result<Key> {
+        let path = path.as_ref();
+
+        let secret = Self::read_private(path)?;
+
         let cert = std::fs::read(path)?;
         let (rem, pem) = parse_x509_pem(&cert)?;
         if !rem.is_empty() {
@@ -103,7 +123,7 @@ impl Key {
         };
 
         Ok(Key {
-            info: KeyInfo::Public(key),
+            info: secret.map_or_else(|| KeyInfo::Public(key), |s| KeyInfo::Secret(s)),
             key_id,
         })
     }
