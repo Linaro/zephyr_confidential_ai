@@ -1,6 +1,9 @@
 //! Flow demo app.
 
 use clap::{Parser, Subcommand};
+use keys::{Key, ContentKey};
+use pdump::HexDump;
+use rand_core::OsRng;
 // use log::error;
 // use ring::rand::SystemRandom;
 // use std::fs;
@@ -35,6 +38,27 @@ enum Commands {
 
     /// Generate keys to use
     Gen,
+
+    /// Create a new session.
+    NewSession {
+        /// Device key to use, should be the name of a .crt file. Will look for
+        /// a file with the same basename, and .key or .pk8 for the private key.
+        #[arg(short, long)]
+        device_key: String,
+
+        /// Service certificate to send the message to. Should be the name of a
+        /// .crt file.
+        #[arg(short = 'c', long)]
+        service_cert: String,
+
+        /// File to store the session state in.
+        #[arg(short, long)]
+        state: String,
+
+        /// File to write the session packet.
+        #[arg(short, long)]
+        output: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -55,8 +79,18 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Some(Commands::Gen) => {
-            gen()
+        Some(Commands::Gen) => gen(),
+        Some(Commands::NewSession {
+            device_key,
+            service_cert,
+            state,
+            output,
+        }) => {
+            println!(
+                "dk {:?}, service {:?}, state {:?}, out {:?}",
+                device_key, service_cert, state, output
+            );
+            new_session(device_key, service_cert, state, output)
         }
         None => {
             println!("Specify subcommand.  'help' to get list of commands");
@@ -81,6 +115,26 @@ fn gen() -> Result<()> {
     // let cert = keys::Cert::new(&rng)?;
     // cert.save(&conf)?;
     // Ok(())
+}
+
+/// Create a new session.
+fn new_session(device_key: &str, service_cert: &str, _state: &str, _output: &str) -> Result<()> {
+    // From the service certificate file, we can load a public key (and associated key-id).
+    let service = Key::from_cert_file(service_cert)?;
+    let device = Key::from_cert_file(device_key)?;
+
+    // Generate a session key, this should be a 16-byte AES key.
+    let session = ContentKey::new(OsRng)?;
+
+    // Make the encrypt0 packet for the service containing this session key.
+    let enc = device.encrypt_cose(session.bytes(), &service.public_key(), OsRng)?;
+
+    // Then wrap this with COSE_Sign1 for our integrity.
+    let signed = device.sign_cose(&enc, OsRng)?;
+
+    signed.dump();
+
+    Ok(())
 }
 
 mod config {
