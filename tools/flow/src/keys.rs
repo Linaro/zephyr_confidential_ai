@@ -122,6 +122,17 @@ impl Key {
             _ => return Err(anyhow!("Cert public key is not EC key")),
         };
 
+        // If we have a private key, ensure that it goes with the public key in
+        // the certificate.
+        match &secret {
+            Some(sec) => {
+                if sec.public_key() != key {
+                    return Err(anyhow!("pk8 key does not match public key in certificate"));
+                }
+            }
+            None => (),
+        }
+
         Ok(Key {
             info: secret.map_or_else(|| KeyInfo::Public(key), |s| KeyInfo::Secret(s)),
             key_id,
