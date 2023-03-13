@@ -3,6 +3,7 @@
 use std::{fs::File, io::Write, path::Path};
 
 use clap::{Parser, Subcommand};
+use coset::{CborSerializable, CoseEncrypt, CoseEncrypt0, CoseSign1};
 use keys::{ContentKey, Key};
 // use pdump::HexDump;
 use rand_core::OsRng;
@@ -72,7 +73,30 @@ enum Commands {
         /// File containing the session state (previously written by new-session).
         #[arg(short, long)]
         state: String,
-    }
+    },
+
+    /// Decrypt a packet using the session information, and the data file.
+    Decrypt {
+        /// File containing the encrypted payload.
+        #[arg(short, long)]
+        input: String,
+
+        /// File to write the plaintext to.
+        #[arg(short, long)]
+        output: String,
+
+        /// File containing the session file written by the new-session command.
+        #[arg(short, long)]
+        session: String,
+
+        /// File containing the device cert.
+        #[arg(short, long)]
+        device_cert: String,
+
+        /// Certificate and key file for the service.
+        #[arg(short = 'c', long)]
+        service_cert: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -111,6 +135,13 @@ fn main() -> Result<()> {
             output,
             state,
         }) => encrypt(input, output, state),
+        Some(Commands::Decrypt {
+            input,
+            output,
+            session,
+            device_cert,
+            service_cert,
+        }) => decrypt(input, output, session, device_cert, service_cert),
         None => {
             println!("Specify subcommand.  'help' to get list of commands");
             Ok(())
@@ -137,7 +168,12 @@ fn gen() -> Result<()> {
 }
 
 /// Create a new session.
-fn new_session(device_key: &str, service_cert: &str, state_path: &str, output_path: &str) -> Result<()> {
+fn new_session(
+    device_key: &str,
+    service_cert: &str,
+    state_path: &str,
+    output_path: &str,
+) -> Result<()> {
     // From the service certificate file, we can load a public key (and associated key-id).
     let service = Key::from_cert_file(service_cert)?;
     let device = Key::from_cert_file(device_key)?;
@@ -187,11 +223,44 @@ fn encrypt(input: &str, output: &str, state_path: &str) -> Result<()> {
     let key = state.content_key()?;
 
     let encd = key.encrypt(&payload, OsRng)?;
-    let mut outfile = File::options()
-        .write(true)
-        .create_new(true)
-        .open(output)?;
+    let mut outfile = File::options().write(true).create_new(true).open(output)?;
     outfile.write_all(&encd)?;
+
+    Ok(())
+}
+
+/// Decrypt payload.
+fn decrypt(
+    input: &str,
+    output: &str,
+    session_path: &str,
+    device_path: &str,
+    service_cert: &str,
+) -> Result<()> {
+    let service = Key::from_cert_file(service_cert)?;
+    let device = Key::from_cert_file(device_path)?;
+
+    // Read the session file, which should be a signed message wraping the
+    // encrypted payload. TODO: Make these tagged.
+    let sess = std::fs::read(session_path)?;
+    let packet = CoseSign1::from_slice(&sess).unwrap();
+
+    device.verify(&packet)?;
+
+    // The encrypted data is within this.
+    let sess = packet.payload.as_ref().unwrap();
+    let packet = CoseEncrypt::from_slice(&sess).unwrap();
+
+    let secret = service.decrypt_cose(&packet)?;
+    println!("Secret {:?}", secret);
+    let secret = ContentKey::from_slice(&secret)?;
+
+    let ctext = std::fs::read(input)?;
+    let ppacket = CoseEncrypt0::from_slice(&ctext).unwrap();
+    let plain = secret.decrypt(&ppacket)?;
+
+    let mut outfile = File::options().write(true).create_new(true).open(output)?;
+    outfile.write_all(&plain)?;
 
     Ok(())
 }
