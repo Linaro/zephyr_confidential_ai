@@ -1,16 +1,12 @@
 //! Flow demo app.
 
-use std::{fs::File, io::Write};
+use std::{fs::File, io::Write, path::Path};
 
 use clap::{Parser, Subcommand};
-use keys::{Key, ContentKey};
-use pdump::HexDump;
+use keys::{ContentKey, Key};
+// use pdump::HexDump;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
-// use log::error;
-// use ring::rand::SystemRandom;
-// use std::fs;
-// use crate::config::Config;
 
 #[cfg(test)]
 mod test;
@@ -62,6 +58,21 @@ enum Commands {
         #[arg(short, long)]
         output: String,
     },
+
+    /// Encrypt.  Sign an encrypt a payload using a given session file.
+    Encrypt {
+        /// File to read the payload from. This is arbitrary data.
+        #[arg(short, long)]
+        input: String,
+
+        /// File to write the generated message to.
+        #[arg(short, long)]
+        output: String,
+
+        /// File containing the session state (previously written by new-session).
+        #[arg(short, long)]
+        state: String,
+    }
 }
 
 fn main() -> Result<()> {
@@ -95,6 +106,11 @@ fn main() -> Result<()> {
             );
             new_session(device_key, service_cert, state, output)
         }
+        Some(Commands::Encrypt {
+            input,
+            output,
+            state,
+        }) => encrypt(input, output, state),
         None => {
             println!("Specify subcommand.  'help' to get list of commands");
             Ok(())
@@ -135,7 +151,7 @@ fn new_session(device_key: &str, service_cert: &str, state_path: &str, output_pa
     // Then wrap this with COSE_Sign1 for our integrity.
     let signed = device.sign_cose(&enc, OsRng)?;
 
-    signed.dump();
+    // signed.dump();
 
     // Write the secret key to a state file. This will need to be encoded in
     // some manner, so we might as well use a COSE encoding, but just use Serde
@@ -161,10 +177,40 @@ fn new_session(device_key: &str, service_cert: &str, state_path: &str, output_pa
     Ok(())
 }
 
+/// Encrypt payload.
+fn encrypt(input: &str, output: &str, state_path: &str) -> Result<()> {
+    let state = SessionState::load(state_path)?;
+    println!("state: {:?}", state);
+
+    let payload = std::fs::read(input)?;
+
+    let key = state.content_key()?;
+
+    let encd = key.encrypt(&payload, OsRng)?;
+    let mut outfile = File::options()
+        .write(true)
+        .create_new(true)
+        .open(output)?;
+    outfile.write_all(&encd)?;
+
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionState {
     secret: Vec<u8>,
     session_id: String,
+}
+
+impl SessionState {
+    pub fn load(path: impl AsRef<Path>) -> Result<SessionState> {
+        let stfile = File::open(path)?;
+        Ok(ciborium::de::from_reader(stfile)?)
+    }
+
+    pub fn content_key(&self) -> Result<ContentKey> {
+        ContentKey::from_slice(&self.secret)
+    }
 }
 
 mod config {
