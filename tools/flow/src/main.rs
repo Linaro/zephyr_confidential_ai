@@ -1,9 +1,12 @@
 //! Flow demo app.
 
+use std::{fs::File, io::Write};
+
 use clap::{Parser, Subcommand};
 use keys::{Key, ContentKey};
 use pdump::HexDump;
 use rand_core::OsRng;
+use serde::{Deserialize, Serialize};
 // use log::error;
 // use ring::rand::SystemRandom;
 // use std::fs;
@@ -118,7 +121,7 @@ fn gen() -> Result<()> {
 }
 
 /// Create a new session.
-fn new_session(device_key: &str, service_cert: &str, _state: &str, _output: &str) -> Result<()> {
+fn new_session(device_key: &str, service_cert: &str, state_path: &str, output_path: &str) -> Result<()> {
     // From the service certificate file, we can load a public key (and associated key-id).
     let service = Key::from_cert_file(service_cert)?;
     let device = Key::from_cert_file(device_key)?;
@@ -134,7 +137,34 @@ fn new_session(device_key: &str, service_cert: &str, _state: &str, _output: &str
 
     signed.dump();
 
+    // Write the secret key to a state file. This will need to be encoded in
+    // some manner, so we might as well use a COSE encoding, but just use Serde
+    // to make it automatic.
+    let state = SessionState {
+        secret: session.bytes().to_vec(),
+        session_id: "session id placeholder".to_string(),
+    };
+    let stfile = File::options()
+        .write(true)
+        .create_new(true)
+        .open(state_path)?;
+    ciborium::ser::into_writer(&state, stfile)?;
+
+    // Write the initial message to a file.
+    // TODO: if this fails, it might make sense to delete the session file.
+    let mut outfile = File::options()
+        .write(true)
+        .create_new(true)
+        .open(output_path)?;
+    outfile.write_all(&signed)?;
+
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SessionState {
+    secret: Vec<u8>,
+    session_id: String,
 }
 
 mod config {

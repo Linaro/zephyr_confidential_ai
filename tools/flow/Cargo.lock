@@ -433,6 +433,7 @@ dependencies = [
  "aes-kw",
  "anyhow",
  "base64 0.21.0",
+ "ciborium",
  "clap",
  "coset",
  "env_logger",
