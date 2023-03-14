@@ -175,8 +175,8 @@ fn new_session(
     output_path: &str,
 ) -> Result<()> {
     // From the service certificate file, we can load a public key (and associated key-id).
-    let service = Key::from_cert_file(service_cert)?;
-    let device = Key::from_cert_file(device_key)?;
+    let service = Key::from_cert_file(service_cert, false)?;
+    let device = Key::from_cert_file(device_key, true)?;
 
     // Generate a session key, this should be a 16-byte AES key.
     let session = ContentKey::new(OsRng)?;
@@ -237,8 +237,8 @@ fn decrypt(
     device_path: &str,
     service_cert: &str,
 ) -> Result<()> {
-    let service = Key::from_cert_file(service_cert)?;
-    let device = Key::from_cert_file(device_path)?;
+    let service = Key::from_cert_file(service_cert, true)?;
+    let device = Key::from_cert_file(device_path, false)?;
 
     // Read the session file, which should be a signed message wraping the
     // encrypted payload. TODO: Make these tagged.

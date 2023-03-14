@@ -3,7 +3,7 @@
 // TODO: Temporary until we use these methods in main.
 #![allow(dead_code)]
 
-use std::{collections::BTreeMap, path::Path, io::ErrorKind};
+use std::{collections::BTreeMap, path::Path};
 
 use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
 use aes_kw::{Kek, KekAes128};
@@ -73,26 +73,28 @@ impl Key {
 
     /// If there is a private key file adjacent to this file certificate, try
     /// reading a private key from it.
-    fn read_private(path: &Path) -> Result<Option<SecretKey>> {
+    fn read_private(path: &Path) -> Result<SecretKey> {
         // Look for a .pk8 file with the same name stem.
         let mut pk_file = path.to_path_buf();
         pk_file.set_extension("pk8");
 
         let pem = match std::fs::read_to_string(pk_file) {
             Ok(buf) => buf,
-            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
             Err(e) => return Err(e.into()),
         };
         let secret = SecretKey::from_pkcs8_pem(&pem).unwrap();
-        Ok(Some(secret))
+        Ok(secret)
     }
 
     /// Build a keypair (or possibly just a public key) out of a certificate
-    /// file.
-    pub fn from_cert_file<P: AsRef<Path>>(path: P) -> Result<Key> {
+    /// file. If `with_private` is `true`, then there must be a `.pk8` file of
+    /// the same base name as the certificate file containing the private key
+    /// for this. In this case, the operations that require a private key will
+    /// be available.
+    pub fn from_cert_file<P: AsRef<Path>>(path: P, with_private: bool) -> Result<Key> {
         let path = path.as_ref();
 
-        let secret = Self::read_private(path)?;
+        let secret = if with_private { Some(Self::read_private(path)?) } else { None };
 
         let cert = std::fs::read(path)?;
         let (rem, pem) = parse_x509_pem(&cert)?;
