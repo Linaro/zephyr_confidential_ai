@@ -16,29 +16,32 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-#define log_info_print(FMT, ARGS ...)		   \
-	do { LOG_INFFMT("[%s] " FMT "\n", \
-			SERV_NAME, ## ARGS); } while (0)
-
-#define log_err_print(FMT, ARGS ...)						\
-	do { LOG_ERRFMT("[%s] <err> %s:%s():%d " FMT "\n",			\
-			SERV_NAME, __FILENAME__,  __func__, __LINE__, ## ARGS);	\
+#define log_info_print(FMT, ARGS...)                                                               \
+	do {                                                                                       \
+		LOG_INFFMT("[%s] " FMT "\n", SERV_NAME, ##ARGS);                                   \
 	} while (0)
 
-#define log_dbg_print(FMT, ARGS ...)						\
-	do { LOG_DBGFMT("[%s] <err> %s:%s():%d " FMT "\n",			\
-			SERV_NAME, __FILENAME__,  __func__, __LINE__, ## ARGS);	\
+#define log_err_print(FMT, ARGS...)                                                                \
+	do {                                                                                       \
+		LOG_ERRFMT("[%s] <err> %s:%s():%d " FMT "\n", SERV_NAME, __FILENAME__, __func__,   \
+			   __LINE__, ##ARGS);                                                      \
+	} while (0)
+
+#define log_dbg_print(FMT, ARGS...)                                                                \
+	do {                                                                                       \
+		LOG_DBGFMT("[%s] <err> %s:%s():%d " FMT "\n", SERV_NAME, __FILENAME__, __func__,   \
+			   __LINE__, ##ARGS);                                                      \
 	} while (0)
 
 typedef enum {
-	HUK_COSE        = 0x5002,               // COSE SIGN key id
+	HUK_COSE = 0x5002, // COSE SIGN key id
 } huk_key_type_t;
 
 /** Supported encoding format for the inference output. */
 typedef enum {
-	HUK_ENC_CBOR = 0,               /**< Request a simple CBOR payload. */
-	HUK_ENC_COSE_SIGN1,             /**< Request a COSE SIGN1 payload. */
-	HUK_ENC_COSE_ENCRYPT0,          /**< Request a COSE ENCRYPT0 payload. */
+	HUK_ENC_CBOR = 0,      /**< Request a simple CBOR payload. */
+	HUK_ENC_COSE_SIGN1,    /**< Request a COSE SIGN1 payload. */
+	HUK_ENC_COSE_ENCRYPT0, /**< Request a COSE ENCRYPT0 payload. */
 	HUK_ENC_NONE,
 } huk_enc_format_t;
 
@@ -55,10 +58,7 @@ typedef enum {
  *
  * \return A status indicating the success/failure of the operation
  */
-psa_status_t psa_huk_cose_sign(float *inf_value,
-			       huk_enc_format_t enc_format,
-			       uint8_t *encoded_buf,
-			       size_t encoded_buf_size,
-			       size_t *encoded_buf_len);
+psa_status_t psa_huk_cose_sign(float *inf_value, huk_enc_format_t enc_format, uint8_t *encoded_buf,
+			       size_t encoded_buf_size, size_t *encoded_buf_len);
 
 #endif // __TFM_HUK_DERIV_SRV_API_H__

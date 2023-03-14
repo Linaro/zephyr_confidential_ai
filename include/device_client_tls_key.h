@@ -12,9 +12,9 @@
  * on emulated platforms with a fixed HUK value.
  */
 #define LABEL_CONCAT(A) #A CONFIG_SECURE_INFER_HUK_DERIV_LABEL_EXTRA
-#define LABEL_HI    LABEL_CONCAT(_EC_PRIV_KEY_HI)
-#define LABEL_LO    LABEL_CONCAT(_EC_PRIV_KEY_LO)
-#define LABEL_UUID  LABEL_CONCAT(UUID)
+#define LABEL_HI	LABEL_CONCAT(_EC_PRIV_KEY_HI)
+#define LABEL_LO	LABEL_CONCAT(_EC_PRIV_KEY_LO)
+#define LABEL_UUID	LABEL_CONCAT(UUID)
 
 /**
  * @brief Setup the device client TLS key.

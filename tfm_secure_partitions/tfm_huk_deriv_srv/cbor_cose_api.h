@@ -29,10 +29,8 @@ extern "C" {
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
-				  float inf_val,
-				  uint8_t *inf_val_encoded_buf,
-				  size_t inf_val_encoded_buf_size,
+psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle, float inf_val,
+				  uint8_t *inf_val_encoded_buf, size_t inf_val_encoded_buf_size,
 				  size_t *inf_val_encoded_buf_len);
 
 /**
@@ -47,10 +45,8 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t tfm_cbor_encode(float inf_val,
-			     uint8_t *inf_val_encoded_buf,
-			     size_t inf_val_encoded_buf_size,
-			     size_t *inf_val_encoded_buf_len);
+psa_status_t tfm_cbor_encode(float inf_val, uint8_t *inf_val_encoded_buf,
+			     size_t inf_val_encoded_buf_size, size_t *inf_val_encoded_buf_len);
 
 /**
  * \brief This function sets up the CBOR and COSE contexts.
@@ -66,10 +62,8 @@ psa_status_t tfm_cbor_encode(float inf_val,
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle,
-				   struct tfm_cose_encode_ctx *me,
-				   int32_t cose_alg_id,
-				   const struct q_useful_buf *out_buf);
+psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle, struct tfm_cose_encode_ctx *me,
+				   int32_t cose_alg_id, const struct q_useful_buf *out_buf);
 
 /**
  * \brief Completes the token after the payload has been added. When this is called
@@ -93,8 +87,8 @@ psa_status_t tfm_cose_encode_finish(struct tfm_cose_encode_ctx *me,
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t tfm_cose_add_data(struct tfm_cose_encode_ctx *token_ctx, int64_t label,
-			       void *data, size_t data_len);
+psa_status_t tfm_cose_add_data(struct tfm_cose_encode_ctx *token_ctx, int64_t label, void *data,
+			       size_t data_len);
 
 #ifdef __cplusplus
 }

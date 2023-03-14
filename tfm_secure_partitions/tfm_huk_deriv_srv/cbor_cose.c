@@ -15,12 +15,11 @@
 #include "nv_ps_counters.h"
 
 /* The algorithm used in COSE */
-#define T_COSE_ALGORITHM              T_COSE_ALGORITHM_ES256
+#define T_COSE_ALGORITHM T_COSE_ALGORITHM_ES256
 
 #define SERV_NAME "COSE SERVICE"
 
-static psa_status_t
-t_cose_err_to_psa_err(enum t_cose_err_t err)
+static psa_status_t t_cose_err_to_psa_err(enum t_cose_err_t err)
 {
 	switch (err) {
 
@@ -42,10 +41,8 @@ t_cose_err_to_psa_err(enum t_cose_err_t err)
 	}
 }
 
-psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle,
-				   struct tfm_cose_encode_ctx *me,
-				   int32_t cose_alg_id,
-				   const struct q_useful_buf *out_buf)
+psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle, struct tfm_cose_encode_ctx *me,
+				   int32_t cose_alg_id, const struct q_useful_buf *out_buf)
 {
 	enum t_cose_err_t cose_ret;
 	psa_status_t return_value = PSA_SUCCESS;
@@ -56,9 +53,7 @@ psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle,
 
 	inf_val_sign_key.crypto_lib = T_COSE_CRYPTO_LIB_PSA;
 	inf_val_sign_key.k.key_handle = key_handle;
-	t_cose_sign1_set_signing_key(&(me->signer_ctx),
-				     inf_val_sign_key,
-				     NULL_Q_USEFUL_BUF_C);
+	t_cose_sign1_set_signing_key(&(me->signer_ctx), inf_val_sign_key, NULL_Q_USEFUL_BUF_C);
 
 	/* Spin up the CBOR encoder */
 	QCBOREncode_Init(&(me->cbor_enc_ctx), *out_buf);
@@ -66,8 +61,7 @@ psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle,
 	/* This will cause the cose headers to be encoded and written into
 	 *  out_buf using me->cbor_enc_ctx
 	 */
-	cose_ret = t_cose_sign1_encode_parameters(&(me->signer_ctx),
-						  &(me->cbor_enc_ctx));
+	cose_ret = t_cose_sign1_encode_parameters(&(me->signer_ctx), &(me->cbor_enc_ctx));
 	if (cose_ret) {
 		return_value = t_cose_err_to_psa_err(cose_ret);
 	}
@@ -77,10 +71,8 @@ psa_status_t tfm_cose_encode_start(psa_key_handle_t key_handle,
 	return return_value;
 }
 
-psa_status_t tfm_cbor_encode(float inf_val,
-			     uint8_t *inf_val_encoded_buf,
-			     size_t inf_val_encoded_buf_size,
-			     size_t *inf_val_encoded_buf_len)
+psa_status_t tfm_cbor_encode(float inf_val, uint8_t *inf_val_encoded_buf,
+			     size_t inf_val_encoded_buf_size, size_t *inf_val_encoded_buf_len)
 {
 	QCBOREncodeContext cbor_enc_ctx;
 	struct q_useful_buf_c inf_val_buf;
@@ -97,8 +89,7 @@ psa_status_t tfm_cbor_encode(float inf_val,
 	inf_val_buf.len = sizeof(inf_val);
 
 	QCBOREncode_OpenMap(&cbor_enc_ctx);
-	QCBOREncode_AddBytesToMapN(&cbor_enc_ctx,
-				   EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE,
+	QCBOREncode_AddBytesToMapN(&cbor_enc_ctx, EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE,
 				   inf_val_buf);
 	QCBOREncode_CloseMap(&cbor_enc_ctx);
 
@@ -115,9 +106,8 @@ psa_status_t tfm_cbor_encode(float inf_val,
 	return PSA_SUCCESS;
 }
 
-psa_status_t
-tfm_cose_encode_finish(struct tfm_cose_encode_ctx *me,
-		       struct q_useful_buf_c *completed_token)
+psa_status_t tfm_cose_encode_finish(struct tfm_cose_encode_ctx *me,
+				    struct q_useful_buf_c *completed_token)
 {
 	psa_status_t return_value = PSA_SUCCESS;
 	/* The completed and signed encoded cose_sign1 */
@@ -128,8 +118,7 @@ tfm_cose_encode_finish(struct tfm_cose_encode_ctx *me,
 	QCBOREncode_CloseMap(&(me->cbor_enc_ctx));
 
 	/* -- Finish up the COSE_Sign1. This is where the signing happens -- */
-	cose_return_value = t_cose_sign1_encode_signature(&(me->signer_ctx),
-							  &(me->cbor_enc_ctx));
+	cose_return_value = t_cose_sign1_encode_signature(&(me->signer_ctx), &(me->cbor_enc_ctx));
 	if (cose_return_value) {
 		/* Main errors are invoking the hash or signature */
 		return_value = t_cose_err_to_psa_err(cose_return_value);
@@ -153,26 +142,21 @@ Done:
 	return return_value;
 }
 
-psa_status_t
-tfm_cose_add_data(struct tfm_cose_encode_ctx *token_ctx, int64_t label,
-		  void *data, size_t data_len)
+psa_status_t tfm_cose_add_data(struct tfm_cose_encode_ctx *token_ctx, int64_t label, void *data,
+			       size_t data_len)
 {
 	struct q_useful_buf_c data_buf;
 
 	data_buf.ptr = data;
 	data_buf.len = data_len;
 
-	QCBOREncode_AddBytesToMapN(&(token_ctx->cbor_enc_ctx),
-				   label,
-				   data_buf);
+	QCBOREncode_AddBytesToMapN(&(token_ctx->cbor_enc_ctx), label, data_buf);
 
 	return PSA_SUCCESS;
 }
 
-psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
-				  float inf_val,
-				  uint8_t *inf_val_encoded_buf,
-				  size_t inf_val_encoded_buf_size,
+psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle, float inf_val,
+				  uint8_t *inf_val_encoded_buf, size_t inf_val_encoded_buf_size,
 				  size_t *inf_val_encoded_buf_len)
 {
 	psa_status_t status = PSA_SUCCESS;
@@ -186,19 +170,15 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
 	/* Get started creating the token. This sets up the CBOR and COSE contexts
 	 * which causes the COSE headers to be constructed.
 	 */
-	status = tfm_cose_encode_start(key_handle,
-				       &encode_ctx,
-				       T_COSE_ALGORITHM,     /* alg_select   */
+	status = tfm_cose_encode_start(key_handle, &encode_ctx, T_COSE_ALGORITHM, /* alg_select   */
 				       &inf_val_encode_sign);
 
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
 
-	status = tfm_cose_add_data(&encode_ctx,
-				   EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE,
-				   (void *)&inf_val,
-				   sizeof(inf_val));
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE,
+				   (void *)&inf_val, sizeof(inf_val));
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
@@ -209,10 +189,8 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
-	status = tfm_cose_add_data(&encode_ctx,
-				   EAT_CBOR_LINARO_NV_COUNTER_ROLL_OVER,
-				   (void *)&nv_ps_counter,
-				   sizeof(nv_ps_counter));
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_NV_COUNTER_ROLL_OVER,
+				   (void *)&nv_ps_counter, sizeof(nv_ps_counter));
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
@@ -222,20 +200,17 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
-	status = tfm_cose_add_data(&encode_ctx,
-				   EAT_CBOR_LINARO_NV_COUNTER_VALUE,
-				   (void *)&nv_ps_counter,
-				   sizeof(nv_ps_counter));
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_NV_COUNTER_VALUE,
+				   (void *)&nv_ps_counter, sizeof(nv_ps_counter));
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
-#endif  /* NV_PS_COUNTERS_SUPPORT */
+#endif /* NV_PS_COUNTERS_SUPPORT */
 
 	/* Finish up creating the token. This is where the actual signature
 	 * is generated. This finishes up the CBOR encoding too.
 	 */
-	status = tfm_cose_encode_finish(&encode_ctx,
-					&completed_inf_val_encode_sign);
+	status = tfm_cose_encode_finish(&encode_ctx, &completed_inf_val_encode_sign);
 	if (status != PSA_SUCCESS) {
 		log_err_print("failed with %d", status);
 		return status;
@@ -259,10 +234,10 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle,
 
 	t_cose_sign1_set_verification_key(&verify_ctx, inf_val_sign_key);
 
-	return_value =  t_cose_sign1_verify(&verify_ctx,
-					    completed_inf_val_encode_sign,      /* COSE to verify */
-					    &payload,                           /* Payload from signed_cose */
-					    NULL);                              /* Don't return parameters */
+	return_value =
+		t_cose_sign1_verify(&verify_ctx, completed_inf_val_encode_sign, /* COSE to verify */
+				    &payload, /* Payload from signed_cose */
+				    NULL);    /* Don't return parameters */
 
 	if (return_value != T_COSE_SUCCESS) {
 		log_err_print("failed with %d", return_value);

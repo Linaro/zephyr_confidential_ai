@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #define PRIVATE_KEY_OFFSET 7
-#define PRIVATE_KEY_SIZE (2 * KEY_LEN_BYTES)
+#define PRIVATE_KEY_SIZE   (2 * KEY_LEN_BYTES)
 
 /* Template for an ASN.1 encoded EC private key.  See RFC5915. */
 static const uint8_t key_template[] = {
@@ -36,11 +36,8 @@ static const uint8_t key_template[] = {
 /** Declare a reference to the application logging interface. */
 LOG_MODULE_DECLARE(app, CONFIG_LOG_DEFAULT_LEVEL);
 
-static psa_status_t psa_huk_deriv_key(uint8_t *key_data,
-				      size_t key_data_size,
-				      size_t *key_data_len,
-				      uint8_t *label,
-				      size_t label_size)
+static psa_status_t psa_huk_deriv_key(uint8_t *key_data, size_t key_data_size, size_t *key_data_len,
+				      uint8_t *label, size_t label_size)
 {
 	psa_status_t status;
 	psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
@@ -64,9 +61,8 @@ static psa_status_t psa_huk_deriv_key(uint8_t *key_data,
 	 */
 
 	/* Set the key attributes for the key */
-	psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT |
-				PSA_KEY_USAGE_DECRYPT |
-				PSA_KEY_USAGE_EXPORT);
+	psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT |
+						     PSA_KEY_USAGE_EXPORT);
 
 	/* Set the algorithm, key type and the number of bits of the key. This is
 	 * mandatory for key derivation. Setting these attributes will ensure that
@@ -83,9 +79,7 @@ static psa_status_t psa_huk_deriv_key(uint8_t *key_data,
 	}
 
 	/* Supply the UUID label as an input to the key derivation */
-	status = psa_key_derivation_input_bytes(&op,
-						PSA_KEY_DERIVATION_INPUT_LABEL,
-						label,
+	status = psa_key_derivation_input_bytes(&op, PSA_KEY_DERIVATION_INPUT_LABEL, label,
 						label_size);
 	if (status != PSA_SUCCESS) {
 		goto err_release_op;
@@ -98,7 +92,7 @@ static psa_status_t psa_huk_deriv_key(uint8_t *key_data,
 		goto err_release_op;
 	}
 
-	status =  psa_export_key(derived_key_id, key_data, key_data_size, key_data_len);
+	status = psa_export_key(derived_key_id, key_data, key_data_size, key_data_len);
 
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("Export key failed with %d", status);
@@ -128,21 +122,20 @@ err_release_op:
 /**
  * Generate EC Key for device client TLS
  */
-static psa_status_t psa_huk_deriv_ec_key(const uint8_t *rx_label,
-					 struct km_key_context *ctx,
+static psa_status_t psa_huk_deriv_ec_key(const uint8_t *rx_label, struct km_key_context *ctx,
 					 psa_key_usage_t key_usage_flag)
 {
 	psa_status_t status = PSA_SUCCESS;
 	uint8_t *ec_priv_key_data;
 	size_t ec_priv_key_data_len = 0;
 
-	if ((ctx == NULL)  || (sizeof(key_template) != sizeof(ctx->local_private))) {
+	if ((ctx == NULL) || (sizeof(key_template) != sizeof(ctx->local_private))) {
 		LOG_ERR("Key ctx is NULL");
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
 	ec_priv_key_data = ctx->local_private + PRIVATE_KEY_OFFSET;
-	uint8_t label_hi[40] = { 0 };
-	uint8_t label_lo[40] = { 0 };
+	uint8_t label_hi[40] = {0};
+	uint8_t label_lo[40] = {0};
 
 	/* Add LABEL_HI to rx_label to create label_hi. */
 	sprintf((char *)label_hi, "%s%s", rx_label, LABEL_HI);
@@ -154,21 +147,15 @@ static psa_status_t psa_huk_deriv_ec_key(const uint8_t *rx_label,
 	 * as the HUK derived key. But the size of EC private key is 32-bytes.
 	 * Therefore, we decided to call HUK based key derivation twice.
 	 */
-	status = psa_huk_deriv_key(ec_priv_key_data,
-				   KEY_LEN_BYTES,
-				   &ec_priv_key_data_len,
-				   label_hi,
+	status = psa_huk_deriv_key(ec_priv_key_data, KEY_LEN_BYTES, &ec_priv_key_data_len, label_hi,
 				   strlen((char *)label_hi));
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("Key deriv failed with %d", status);
 		return status;
 	}
 
-	status = psa_huk_deriv_key(&ec_priv_key_data[ec_priv_key_data_len],
-				   KEY_LEN_BYTES,
-				   &ec_priv_key_data_len,
-				   label_lo,
-				   strlen((char *)label_lo));
+	status = psa_huk_deriv_key(&ec_priv_key_data[ec_priv_key_data_len], KEY_LEN_BYTES,
+				   &ec_priv_key_data_len, label_lo, strlen((char *)label_lo));
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("Key deriv failed with %d", status);
 		return status;
@@ -181,9 +168,7 @@ static psa_status_t psa_huk_deriv_ec_key(const uint8_t *rx_label,
 	psa_set_key_algorithm(&key_attributes, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
 	psa_set_key_type(&key_attributes, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
 
-	status = psa_import_key(&key_attributes,
-				ec_priv_key_data,
-				PRIVATE_KEY_SIZE,
+	status = psa_import_key(&key_attributes, ec_priv_key_data, PRIVATE_KEY_SIZE,
 				&ctx->key_handle);
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("Import key failed with %d", status);
@@ -205,15 +190,11 @@ void device_client_tls_key_init(struct km_key_context *ctx)
 	/** These are the hpke_info passed to key derivation for generating
 	 *  a unique keys for Device client TLS.
 	 */
-	const char *hpke_info[1] = {
-		"HUK_CLIENT_TLS"
-	};
+	const char *hpke_info[1] = {"HUK_CLIENT_TLS"};
 
-	status = psa_huk_deriv_ec_key((const uint8_t *)hpke_info[0],
-				      ctx,
-				      (PSA_KEY_USAGE_SIGN_HASH |
-				       PSA_KEY_USAGE_VERIFY_MESSAGE |
-				       PSA_KEY_USAGE_EXPORT));
+	status = psa_huk_deriv_ec_key(
+		(const uint8_t *)hpke_info[0], ctx,
+		(PSA_KEY_USAGE_SIGN_HASH | PSA_KEY_USAGE_VERIFY_MESSAGE | PSA_KEY_USAGE_EXPORT));
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("EC key deriv failed with %d", status);
 		goto err;

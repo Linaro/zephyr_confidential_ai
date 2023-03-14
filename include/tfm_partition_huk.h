@@ -24,9 +24,7 @@ extern "C" {
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t psa_huk_get_pubkey(psa_key_id_t *key_id,
-				uint8_t *ec_pk_data,
-				size_t ec_pk_data_size);
+psa_status_t psa_huk_get_pubkey(psa_key_id_t *key_id, uint8_t *ec_pk_data, size_t ec_pk_data_size);
 
 /**
  * \brief Get the EC key status from HUK EC key status secure service
@@ -37,9 +35,7 @@ psa_status_t psa_huk_get_pubkey(psa_key_id_t *key_id,
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t psa_huk_ec_key_stat(psa_key_id_t *key_id,
-				 enum km_key_stat *stat,
-				 _Bool set_status);
+psa_status_t psa_huk_ec_key_stat(psa_key_id_t *key_id, enum km_key_stat *stat, _Bool set_status);
 
 /**
  * \brief Get the UUID from HUK generate UUID service
@@ -49,9 +45,7 @@ psa_status_t psa_huk_ec_key_stat(psa_key_id_t *key_id,
  *
  * \return A status indicating the success/failure of the operation
  */
-psa_status_t psa_huk_get_uuid(void *uuid,
-			      size_t uuid_size);
-
+psa_status_t psa_huk_get_uuid(void *uuid, size_t uuid_size);
 
 /**
  * @brief Calculate the SHA256 hash value of the given CSR payload and sign the hash
@@ -66,12 +60,8 @@ psa_status_t psa_huk_get_uuid(void *uuid,
  *
  * @return psa_status_t
  */
-psa_status_t psa_huk_hash_sign(psa_key_id_t *key_id,
-			       uint8_t *csr_data,
-			       size_t csr_data_size,
-			       uint8_t *sig,
-			       size_t sig_size,
-			       size_t *sig_len);
+psa_status_t psa_huk_hash_sign(psa_key_id_t *key_id, uint8_t *csr_data, size_t csr_data_size,
+			       uint8_t *sig, size_t sig_size, size_t *sig_len);
 
 /**
  * \brief Create Application Attestation Token (AAT) with claim data of TFLM and UTVM
@@ -83,9 +73,7 @@ psa_status_t psa_huk_hash_sign(psa_key_id_t *key_id,
  *
  * \return Returns error code as specified in \ref psa_status_t
  */
-psa_status_t psa_huk_aat(uint8_t *encoded_buf,
-			 size_t encoded_buf_size,
-			 size_t *encoded_buf_len);
+psa_status_t psa_huk_aat(uint8_t *encoded_buf, size_t encoded_buf_size, size_t *encoded_buf_len);
 
 #ifdef __cplusplus
 }
