@@ -1,15 +1,17 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2020-2021, Arm Limited. All rights reserved.
+# Copyright (c) 2020-2023, Arm Limited. All rights reserved.
+# Copyright (c) 2021-2023 Linaro Limited
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 #-------------------------------------------------------------------------------
 
 {
-  "psa_framework_version": 1.0,
+  "psa_framework_version": 1.1,
   "name": "TFM_SP_UTVM_SERVICE",
   "type": "APPLICATION-ROT",
   "priority": "NORMAL",
+  "model": "IPC",
   "entry_point": "tfm_utvm_service_req_mngr_init",
   "stack_size": "0x2800",
   "services": [
@@ -21,6 +23,7 @@
                           # bits [11:0] are arbitrary at the discretion of the
                           # vendor.
       "non_secure_clients": true,
+      "connection_based": true,
       "version": 1,
       "version_policy": "STRICT"
     },
@@ -32,6 +35,7 @@
                           # bits [11:0] are arbitrary at the discretion of the
                           # vendor.
       "non_secure_clients": false,
+      "connection_based": true,
       "version": 1,
       "version_policy": "STRICT"
     },
@@ -43,6 +47,7 @@
                           # bits [11:0] are arbitrary at the discretion of the
                           # vendor.
       "non_secure_clients": false,
+      "connection_based": true,
       "version": 1,
       "version_policy": "STRICT"
     },

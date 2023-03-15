@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2022 Linaro Limited
+# Copyright (c) 2022-2023 Linaro Limited
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -55,13 +55,11 @@ target_sources(tfm_app_rot_partition_utvm
 # The generated sources
 target_sources(tfm_app_rot_partition_utvm
     PRIVATE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_utvm_service/auto_generated/intermedia_tfm_utvm_service.c>
+        ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_utvm_service/auto_generated/intermedia_tfm_utvm_service.c
 )
 target_sources(tfm_partitions
     INTERFACE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_utvm_service/auto_generated/load_info_tfm_utvm_service.c>
+        ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_utvm_service/auto_generated/load_info_tfm_utvm_service.c
 )
 
 target_include_directories(tfm_app_rot_partition_utvm
@@ -82,11 +80,15 @@ target_compile_options(tfm_app_rot_partition_utvm
 
 target_link_libraries(tfm_app_rot_partition_utvm
     PRIVATE
-        tfm_secure_api
         psa_interface
         platform_s
         tfm_sprt
         tfm_app_rot_partition_huk_deriv
+)
+
+target_link_libraries(tfm_spm
+    PRIVATE
+        tfm_app_rot_partition_utvm
 )
 
 ############################ Partition Defs ####################################

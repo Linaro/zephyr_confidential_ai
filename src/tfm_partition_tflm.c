@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <tfm_veneers.h>
 #include <tfm_ns_interface.h>
 
 #include "tfm_partition_tflm.h"
