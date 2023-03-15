@@ -44,7 +44,7 @@ static psa_status_t tfm_encode_random_bytes_to_uuid(uint8_t *random_bytes, size_
 	int j = 0;
 	int hyphen_index = 8;
 
-	if (random_bytes_len != KEY_LEN_BYTES) {
+	if (random_bytes_len != (KEY_LEN_BYTES / 2)) {
 		return PSA_ERROR_INSUFFICIENT_DATA;
 	}
 
@@ -77,78 +77,53 @@ static psa_status_t tfm_encode_random_bytes_to_uuid(uint8_t *random_bytes, size_
 	uuid_buf[j] = '\0';
 }
 
-static psa_status_t tfm_huk_deriv_unique_key(uint8_t *key_data, size_t key_data_size,
-					     size_t *key_data_len, uint8_t *label,
-					     size_t label_size)
+static psa_status_t tfm_huk_deriv_unique_key(uint8_t *label, size_t label_size,
+					     psa_key_usage_t key_usage_flag,
+					     psa_key_handle_t *key_handle)
 {
 	psa_status_t status;
 	psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
 	psa_key_derivation_operation_t op = PSA_KEY_DERIVATION_OPERATION_INIT;
-	psa_key_id_t derived_key_id;
-
-	if (key_data_size < KEY_LEN_BYTES) {
-		return PSA_ERROR_BUFFER_TOO_SMALL;
-	}
 
 	if (label == NULL || label_size == 0) {
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
 
-	/* Currently, MbedTLS does not support key derivation for Elliptic curves.
-	 * There is a PR https://github.com/ARMmbed/mbedtls/pull/5139 in progress
-	 * though. Once this PR is merged, TF-M updates MbedTLS and finally, once
-	 * Zephyr updates to latest TF-M, then we can use derive key/s for Elliptic
-	 * curve instead of using symmetric keys as starting point for Elliptic
-	 * curve key derivation.
-	 */
-
 	/* Set the key attributes for the key */
-	psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT |
-						     PSA_KEY_USAGE_EXPORT);
+	psa_set_key_usage_flags(&attributes, key_usage_flag);
 
 	/* Set the algorithm, key type and the number of bits of the key. This is
 	 * mandatory for key derivation. Setting these attributes will ensure that
 	 * derived key is in accordance with the standard, if any.
 	 */
-	psa_set_key_algorithm(&attributes, PSA_ALG_GCM);
-	psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
+	psa_set_key_algorithm(&attributes, PSA_ALG_ECDSA(PSA_ALG_SHA_256));
+	psa_set_key_lifetime(&attributes, PSA_KEY_LIFETIME_VOLATILE);
+	psa_set_key_type(&attributes, PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1));
 	psa_set_key_bits(&attributes, PSA_BYTES_TO_BITS(KEY_LEN_BYTES));
 
 	/* Set up a key derivation operation with HUK derivation as the alg */
-	status = psa_key_derivation_setup(&op, TFM_CRYPTO_ALG_HUK_DERIVATION);
+	status = psa_key_derivation_setup(&op, PSA_ALG_HKDF(PSA_ALG_SHA_256));
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
 
 	/* Supply the UUID label as an input to the key derivation */
-	status = psa_key_derivation_input_bytes(&op, PSA_KEY_DERIVATION_INPUT_LABEL, label,
+	status = psa_key_derivation_input_bytes(&op, PSA_KEY_DERIVATION_INPUT_INFO, label,
 						label_size);
 	if (status != PSA_SUCCESS) {
 		goto err_release_op;
 	}
 
+	status = psa_key_derivation_input_key(&op, PSA_KEY_DERIVATION_INPUT_SECRET,
+					      TFM_BUILTIN_KEY_ID_HUK);
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
 	/* Create the storage key from the key derivation operation */
-	status = psa_key_derivation_output_key(&attributes, &op, &derived_key_id);
+	status = psa_key_derivation_output_key(&attributes, &op, key_handle);
 	if (status != PSA_SUCCESS) {
 		goto err_release_op;
-	}
-
-	status = psa_export_key(derived_key_id, key_data, key_data_size, key_data_len);
-
-	if (status != PSA_SUCCESS) {
-		goto err_release_op;
-	}
-
-	/* Free resources associated with the key derivation operation */
-	status = psa_key_derivation_abort(&op);
-	if (status != PSA_SUCCESS) {
-		return status;
-	}
-
-	status = psa_destroy_key(derived_key_id);
-	if (status != PSA_SUCCESS) {
-		log_err_print("failed with %d", status);
-		return status;
 	}
 
 	return PSA_SUCCESS;
@@ -297,12 +272,10 @@ static psa_status_t tfm_huk_deriv_ec_key(const uint8_t *rx_label, const psa_key_
 					 psa_key_usage_t key_usage_flag)
 {
 	psa_status_t status = PSA_SUCCESS;
-	uint8_t ec_priv_key_data[KEY_LEN_BYTES * 2] = {0};
-	size_t ec_priv_key_data_len = 0;
 	huk_key_idx_t idx;
 	huk_key_stat_t stat;
-	uint8_t label_hi[LABEL_BUFF_SIZE] = {0};
-	uint8_t label_lo[LABEL_BUFF_SIZE] = {0};
+	uint8_t label[LABEL_BUFF_SIZE] = {0};
+	psa_key_handle_t tflm_cose_key_handle = 0;
 
 	status = tfm_huk_key_get_idx(key_id, &idx);
 	if (status != PSA_SUCCESS) {
@@ -318,19 +291,10 @@ static psa_status_t tfm_huk_deriv_ec_key(const uint8_t *rx_label, const psa_key_
 		return PSA_SUCCESS;
 	}
 
-	if (LABEL_BUFF_SIZE > (strlen((char *)rx_label) + strlen(LABEL_HI))) {
-		/* Add LABEL_HI to rx_label to create label_hi. */
-		strcpy((char *)label_hi, (char *)rx_label);
-		strcat((char *)label_hi, LABEL_HI);
-	} else {
-		log_err_print("Insufficient memory to store label");
-		return PSA_ERROR_INSUFFICIENT_MEMORY;
-	}
-
-	if (LABEL_BUFF_SIZE > (strlen((char *)rx_label) + strlen(LABEL_LO))) {
-		/* Add LABEL_LO to rx_label to create label_lo. */
-		strcpy((char *)label_lo, (char *)rx_label);
-		strcat((char *)label_lo, LABEL_LO);
+	if (LABEL_BUFF_SIZE > (strlen((char *)rx_label) + strlen(LABEL))) {
+		/* Add LABEL to rx_label to create unique label. */
+		strcpy((char *)label, (char *)rx_label);
+		strcat((char *)label, LABEL);
 	} else {
 		log_err_print("Insufficient memory to store label");
 		return PSA_ERROR_INSUFFICIENT_MEMORY;
@@ -340,38 +304,12 @@ static psa_status_t tfm_huk_deriv_ec_key(const uint8_t *rx_label, const psa_key_
 	 * as the HUK derived key. But the size of EC private key is 32-bytes.
 	 * Therefore, we decided to call HUK based key derivation twice.
 	 */
-	status = tfm_huk_deriv_unique_key(ec_priv_key_data, KEY_LEN_BYTES, &ec_priv_key_data_len,
-					  label_hi, strlen((char *)label_hi));
+	status = tfm_huk_deriv_unique_key(label, strlen((char *)label), key_usage_flag,
+					  &tflm_cose_key_handle);
 	if (status != PSA_SUCCESS) {
 		return status;
 	}
 
-	status =
-		tfm_huk_deriv_unique_key(&ec_priv_key_data[ec_priv_key_data_len], KEY_LEN_BYTES,
-					 &ec_priv_key_data_len, label_lo, strlen((char *)label_lo));
-	if (status != PSA_SUCCESS) {
-		return status;
-	}
-
-	psa_key_attributes_t key_attributes = PSA_KEY_ATTRIBUTES_INIT;
-	psa_key_type_t key_type = PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1);
-	psa_algorithm_t alg = PSA_ALG_ECDSA(PSA_ALG_SHA_256);
-	psa_key_handle_t tflm_cose_key_handle = 0;
-
-	/* Setup the key's attributes before the creation request. */
-	psa_set_key_usage_flags(&key_attributes, key_usage_flag);
-	psa_set_key_lifetime(&key_attributes, PSA_KEY_LIFETIME_VOLATILE);
-	psa_set_key_algorithm(&key_attributes, alg);
-	psa_set_key_type(&key_attributes, key_type);
-
-	status = psa_import_key(&key_attributes, ec_priv_key_data, sizeof(ec_priv_key_data),
-				&tflm_cose_key_handle);
-	if (status != PSA_SUCCESS) {
-		log_err_print("failed with %d", status);
-		return status;
-	}
-
-	log_dbg_print("PSA: Import key: 0x%x", tflm_cose_key_handle);
 	status = tfm_huk_key_context_init(idx, key_id, HUK_KEY_GEN, tflm_cose_key_handle);
 	if (status != PSA_SUCCESS) {
 		log_err_print("failed with %d", status);
@@ -556,7 +494,6 @@ static psa_status_t tfm_huk_hash_sign_csr(psa_msg_t *msg)
 		log_info_print("Verified ASN.1 tag and length of the payload");
 	}
 
-	log_info_print("Key id: 0x%x", key_id);
 	if (!PSA_ALG_IS_ECDSA(psa_alg_id)) {
 		status = PSA_ERROR_NOT_SUPPORTED;
 		goto err;
@@ -611,10 +548,10 @@ static psa_status_t tfm_huk_gen_uuid(psa_msg_t *msg)
 	psa_status_t status = PSA_SUCCESS;
 	size_t uuid_length;
 	static uint8_t uuid_encoded[37] = {0};
-	uint8_t uuid[16] = {0};
+	uint8_t uuid[32] = {0};
 	uint8_t uuid_label[LABEL_BUFF_SIZE] = {0};
 	static uint8_t is_uuid_generated = 0;
-
+	psa_key_handle_t key_handle = 0;
 	/* Populate uuid_label from label macro. */
 	if (LABEL_BUFF_SIZE > strlen(LABEL_UUID)) {
 		strcpy((char *)uuid_label, LABEL_UUID);
@@ -624,13 +561,17 @@ static psa_status_t tfm_huk_gen_uuid(psa_msg_t *msg)
 	}
 
 	if (!is_uuid_generated) {
-		status = tfm_huk_deriv_unique_key(uuid, sizeof(uuid), &uuid_length, uuid_label,
-						  strlen((char *)uuid_label));
-
+		status = tfm_huk_deriv_unique_key(uuid_label, strlen((char *)uuid_label),
+						  PSA_KEY_USAGE_EXPORT, &key_handle);
 		if (status != PSA_SUCCESS) {
 			return status;
 		}
-		tfm_encode_random_bytes_to_uuid(uuid, sizeof(uuid), uuid_encoded,
+		status = psa_export_key(key_handle, uuid, sizeof(uuid), &uuid_length);
+		if (status != PSA_SUCCESS) {
+			return status;
+		}
+
+		tfm_encode_random_bytes_to_uuid(uuid, (uuid_length / 2), uuid_encoded,
 						sizeof(uuid_encoded));
 		is_uuid_generated = 1;
 		log_info_print("Generated UUID: %s", uuid_encoded);
