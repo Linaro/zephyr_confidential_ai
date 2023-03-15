@@ -34,7 +34,7 @@ use rand_core::OsRng;
 #[cfg(test)]
 use coset::CoseEncrypt;
 
-use crate::{data::Example, pdump::HexDump, Result};
+use crate::{data::Example, pdump::HexDump, Result, errors::wrap};
 
 #[derive(Debug)]
 pub struct Key {
@@ -242,7 +242,7 @@ impl Key {
             })
             .algorithm(alg)
             .build();
-        let ctx = ctxb.to_vec().unwrap();
+        let ctx = wrap(ctxb.to_vec())?;
 
         let secret = p256::ecdh::diffie_hellman(
             self.secret_key().unwrap().to_nonzero_scalar(),
@@ -359,7 +359,7 @@ impl Key {
             })
             .algorithm(alg)
             .build();
-        let ctx = ctxb.to_vec().unwrap();
+        let ctx = wrap(ctxb.to_vec())?;
 
         let secret = p256::ecdh::diffie_hellman(eph_key.to_nonzero_scalar(), recipient.as_affine());
         let hkdf = secret.extract::<sha2::Sha256>(None);
@@ -398,7 +398,7 @@ impl Key {
 
         // println!("Packet: {:#?}", packet);
 
-        Ok(packet.to_vec().unwrap())
+        Ok(wrap(packet.to_vec())?)
     }
 
     /// Sign this payload, using our key.
@@ -429,7 +429,7 @@ impl Key {
             .build();
         // println!("cose sign: {:#?}", packet);
 
-        Ok(packet.to_vec().unwrap())
+        Ok(wrap(packet.to_vec())?)
     }
 
     /// Verify the signature on a Cose1 packet, using the current public key.
@@ -509,7 +509,7 @@ impl ContentKey {
                 result
             })
             .build();
-        Ok(packet.to_vec().unwrap())
+        Ok(wrap(packet.to_vec())?)
     }
 
     // Extract the bytes of the private key from this AES key.

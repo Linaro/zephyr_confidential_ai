@@ -9,10 +9,13 @@ use keys::{ContentKey, Key};
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
+use crate::errors::wrap;
+
 #[cfg(test)]
 mod test;
 
 mod data;
+mod errors;
 mod keys;
 mod pdump;
 
@@ -243,20 +246,20 @@ fn decrypt(
     // Read the session file, which should be a signed message wraping the
     // encrypted payload. TODO: Make these tagged.
     let sess = std::fs::read(session_path)?;
-    let packet = CoseSign1::from_slice(&sess).unwrap();
+    let packet = wrap(CoseSign1::from_slice(&sess))?;
 
     device.verify(&packet)?;
 
     // The encrypted data is within this.
     let sess = packet.payload.as_ref().unwrap();
-    let packet = CoseEncrypt::from_slice(&sess).unwrap();
+    let packet = wrap(CoseEncrypt::from_slice(&sess))?;
 
     let secret = service.decrypt_cose(&packet)?;
     println!("Secret {:?}", secret);
     let secret = ContentKey::from_slice(&secret)?;
 
     let ctext = std::fs::read(input)?;
-    let ppacket = CoseEncrypt0::from_slice(&ctext).unwrap();
+    let ppacket = wrap(CoseEncrypt0::from_slice(&ctext))?;
     let plain = secret.decrypt(&ppacket)?;
 
     let mut outfile = File::options().write(true).create_new(true).open(output)?;
