@@ -124,25 +124,3 @@ psa_status_t psa_huk_hash_sign(psa_key_id_t *key_id, uint8_t *csr_data, size_t c
 
 	return status;
 }
-
-psa_status_t psa_huk_aat(uint8_t *encoded_buf, size_t encoded_buf_size, size_t *encoded_buf_len)
-{
-	psa_status_t status;
-	psa_handle_t handle;
-
-	psa_outvec out_vec[] = {
-		{.base = encoded_buf, .len = encoded_buf_size},
-		{.base = encoded_buf_len, .len = sizeof(size_t)},
-	};
-
-	handle = psa_connect(TFM_HUK_AAT_SID, TFM_HUK_AAT_VERSION);
-	if (!PSA_HANDLE_IS_VALID(handle)) {
-		return PSA_ERROR_GENERIC_ERROR;
-	}
-
-	status = psa_call(handle, PSA_IPC_CALL, NULL, 0, out_vec, IOVEC_LEN(out_vec));
-
-	psa_close(handle);
-
-	return status;
-}

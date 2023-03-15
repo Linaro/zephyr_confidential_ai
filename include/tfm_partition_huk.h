@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -62,18 +62,6 @@ psa_status_t psa_huk_get_uuid(void *uuid, size_t uuid_size);
  */
 psa_status_t psa_huk_hash_sign(psa_key_id_t *key_id, uint8_t *csr_data, size_t csr_data_size,
 			       uint8_t *sig, size_t sig_size, size_t *sig_len);
-
-/**
- * \brief Create Application Attestation Token (AAT) with claim data of TFLM and UTVM
- * version plus it's model version.
- *
- * \param[out]  encoded_buf       Buffer to which encoded data is written into.
- * \param[in]   encoded_buf_size  Size of encoded_buf in bytes.
- * \param[out]  encoded_buf_len   Encoded and signed payload len in bytes.
- *
- * \return Returns error code as specified in \ref psa_status_t
- */
-psa_status_t psa_huk_aat(uint8_t *encoded_buf, size_t encoded_buf_size, size_t *encoded_buf_len);
 
 #ifdef __cplusplus
 }

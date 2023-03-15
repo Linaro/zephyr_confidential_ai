@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -580,19 +580,26 @@ static psa_status_t tfm_huk_gen_uuid(psa_msg_t *msg)
 	return status;
 }
 
-static psa_status_t tfm_huk_aat(psa_msg_t *msg)
+static psa_status_t tfm_huk_cose_aat_sign(psa_msg_t *msg)
 {
 	psa_status_t status = PSA_SUCCESS;
 	uint8_t encoded_buf[msg->out_size[0]];
 	size_t encoded_buf_len = 0;
 	psa_key_handle_t key_handle;
+	infer_version_t tflm_infer_ver;
+	infer_version_t utvm_infer_ver;
+
+	psa_read(msg->handle, 0, &tflm_infer_ver, msg->in_size[0]);
+	psa_read(msg->handle, 1, &utvm_infer_ver, msg->in_size[1]);
 
 	status = tfm_huk_key_handle_get(HUK_COSE, &key_handle);
 	if (status != PSA_SUCCESS) {
 		log_err_print("failed with %d", status);
 		goto err;
 	}
-	status = tfm_cose_create_aat(key_handle, encoded_buf, msg->out_size[0], &encoded_buf_len);
+
+	status = tfm_cose_enc_aat_sign(key_handle, &tflm_infer_ver, &utvm_infer_ver, encoded_buf,
+				       msg->out_size[0], &encoded_buf_len);
 	if (status != PSA_SUCCESS) {
 		log_err_print("AAT creation failed with %d", status);
 		goto err;
@@ -654,8 +661,9 @@ psa_status_t tfm_huk_deriv_req_mgr_init(void)
 		} else if (signals & TFM_HUK_HASH_SIGN_SIGNAL) {
 			tfm_huk_deriv_signal_handle(TFM_HUK_HASH_SIGN_SIGNAL,
 						    tfm_huk_hash_sign_csr);
-		} else if (signals & TFM_HUK_AAT_SIGNAL) {
-			tfm_huk_deriv_signal_handle(TFM_HUK_AAT_SIGNAL, tfm_huk_aat);
+		} else if (signals & TFM_HUK_COSE_AAT_SIGN_SIGNAL) {
+			tfm_huk_deriv_signal_handle(TFM_HUK_COSE_AAT_SIGN_SIGNAL,
+						    tfm_huk_cose_aat_sign);
 		} else {
 			psa_panic();
 		}

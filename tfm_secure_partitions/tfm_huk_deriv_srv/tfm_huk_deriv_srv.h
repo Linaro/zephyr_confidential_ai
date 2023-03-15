@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Linaro Limited
+ * Copyright (c) 2022-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,17 +20,16 @@
 #include "psa/service.h"
 #include "psa_manifest/tfm_huk_deriv_srv.h"
 #include "tfm_huk_deriv_srv_api.h"
-#include "aat.h"
 
-#define KEY_LEN_BYTES 32
+#define KEY_LEN_BYTES	32
 /* This macro appends an optional HUK_DERIV_LABEL_EXTRA string to the
  * label used for key derivation, enabling key diversity during testing
  * on emulated platforms with a fixed HUK value.
  * It can be set at compile time via '-DHUK_DERIV_LABEL_EXTRA=value'.
  */
 #define LABEL_CONCAT(A) #A HUK_DERIV_LABEL_EXTRA
-#define LABEL    LABEL_CONCAT(_EC_PRIV_KEY)
-#define LABEL_UUID  LABEL_CONCAT(UUID)
+#define LABEL		LABEL_CONCAT(_EC_PRIV_KEY)
+#define LABEL_UUID	LABEL_CONCAT(UUID)
 
 #define SERV_NAME "HUK DERIV SERV"
 
@@ -70,13 +69,13 @@ typedef psa_status_t (*signal_handler_t)(psa_msg_t *);
 const char hex_digits[] = {'0', '1', '2', '3', '4', '5', '6', '7',
 			   '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-#define UUID_STR_LEN (KEY_LEN_BYTES + 4 + 1)
-#define UUID_7TH_BYTE_MASK  0x0f        /* 0b0000_1111*/
-#define UUID_7TH_BYTE_SET   0x40        /* 0b0100_0000 */
-#define UUID_9TH_BYTE_MASK  0x3f        /* 0b0011_1111*/
-#define UUID_9TH_BYTE_SET   0x80        /* 0b1000_0000*/
-#define TFM_HUK_ASN1_CONSTRUCTED      0x20
-#define TFM_HUK_ASN1_SEQUENCE         0x10
+#define UUID_STR_LEN		       (KEY_LEN_BYTES + 4 + 1)
+#define UUID_7TH_BYTE_MASK	       0x0f /* 0b0000_1111*/
+#define UUID_7TH_BYTE_SET	       0x40 /* 0b0100_0000 */
+#define UUID_9TH_BYTE_MASK	       0x3f /* 0b0011_1111*/
+#define UUID_9TH_BYTE_SET	       0x80 /* 0b1000_0000*/
+#define TFM_HUK_ASN1_CONSTRUCTED       0x20
+#define TFM_HUK_ASN1_SEQUENCE	       0x10
 #define TFM_HUK_ASN1_DATA_LENGTH_0_255 1
 
 #endif // __TFM_HUK_DERIV_SRV_H__

@@ -68,11 +68,12 @@
         "version_policy": "STRICT"
     },
     {
-      "name": "TFM_HUK_AAT",
+      "name": "TFM_HUK_COSE_AAT_SIGN",
        "sid": "0x4c690106", # Bits [31:12] denote the vendor (change this),
                            # bits [11:0] are arbitrary at the discretion of the
                            # vendor.
-        "non_secure_clients": true,
+        "non_secure_clients": false,
+        "connection_based": true,
         "version": 1,
         "version_policy": "STRICT"
     },
@@ -80,10 +81,6 @@
 
   "dependencies": [
     "TFM_CRYPTO",
-    "TFM_TFLM_VERSION_INFO_SERVICE",
-    "TFM_TFLM_MODEL_VERSION_INFO_SERVICE",
-    "TFM_UTVM_VERSION_INFO_SERVICE",
-    "TFM_UTVM_MODEL_VERSION_INFO_SERVICE",
     "TFM_PROTECTED_STORAGE_SERVICE"
   ]
 }

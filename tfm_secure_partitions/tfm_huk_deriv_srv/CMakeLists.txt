@@ -32,7 +32,6 @@ list(APPEND tfm_huk_service_files
     tfm_huk_deriv_srv.c
     tfm_huk_deriv_srv_api.c
     cbor_cose.c
-    aat.c
 )
 
 target_sources(tfm_app_rot_partition_huk_deriv
