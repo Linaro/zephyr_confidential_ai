@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,7 +11,6 @@
 #include "tfm_sp_log.h"
 #include "psa/service.h"
 #include "psa/crypto.h"
-#include "tfm_huk_deriv_srv_api.h"
 #include "nv_ps_counters.h"
 
 /* The algorithm used in COSE */
@@ -244,6 +243,105 @@ psa_status_t tfm_cose_encode_sign(psa_key_handle_t key_handle, float inf_val,
 	} else {
 		log_info_print("COSE signature verification succeeded");
 	}
+#endif
+	return status;
+}
+
+/*
+ * Create Application Attestation Token (AAT) with claim data of TFLM and UTVM version plus
+ * it's model version.
+ */
+psa_status_t tfm_cose_enc_aat_sign(psa_key_handle_t key_handle, infer_version_t *tflm_infer_ver,
+				   infer_version_t *utvm_infer_ver, uint8_t *encoded_buf,
+				   size_t encoded_buf_size, size_t *encoded_buf_len)
+{
+	psa_status_t status = PSA_SUCCESS;
+	struct tfm_cose_encode_ctx encode_ctx;
+	struct q_useful_buf encode_sign;
+	struct q_useful_buf_c completed_encode_sign;
+
+	encode_sign.ptr = encoded_buf;
+	encode_sign.len = encoded_buf_size;
+
+	/* Get started creating the token. This sets up the CBOR and COSE contexts
+	 * which causes the COSE headers to be constructed.
+	 */
+	status = tfm_cose_encode_start(key_handle, &encode_ctx, T_COSE_ALGORITHM, /* alg_select   */
+				       &encode_sign);
+
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
+	/* Add TFLM version details */
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_LABEL_TFLM_VERSION,
+				   (void *)tflm_infer_ver->infer_version,
+				   tflm_infer_ver->infer_ver_len);
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
+	/* Add TFLM model version details */
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_LABEL_TFLM_SINE_MODEL_VERSION,
+				   (void *)tflm_infer_ver->model_version,
+				   tflm_infer_ver->model_ver_len);
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
+	/* Add MicroTVM version details */
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_LABEL_MTVM_VERSION,
+				   (void *)utvm_infer_ver->infer_version,
+				   utvm_infer_ver->infer_ver_len);
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
+	/* Add MicroTVM sine model version details */
+	status = tfm_cose_add_data(&encode_ctx, EAT_CBOR_LINARO_LABEL_MTVM_SINE_MODEL_VERSION,
+				   (void *)utvm_infer_ver->model_version,
+				   utvm_infer_ver->model_ver_len);
+	if (status != PSA_SUCCESS) {
+		return status;
+	}
+
+	/* Finish up creating the token. This is where the actual signature
+	 * is generated. This finishes up the CBOR encoding too.
+	 */
+	status = tfm_cose_encode_finish(&encode_ctx, &completed_encode_sign);
+	if (status != PSA_SUCCESS) {
+		log_err_print("failed with %d", status);
+		return status;
+	}
+
+	encoded_buf = (uint8_t *)completed_encode_sign.ptr;
+	*encoded_buf_len = completed_encode_sign.len;
+
+#if CONFIG_COSE_VERIFY_SIGN_ON_S_SIDE
+	/* Verify signature */
+	struct t_cose_key sign_key;
+
+	sign_key.crypto_lib = T_COSE_CRYPTO_LIB_PSA;
+	sign_key.k.key_handle = key_handle;
+
+	struct q_useful_buf_c payload;
+	int32_t return_value;
+	struct t_cose_sign1_verify_ctx verify_ctx;
+
+	t_cose_sign1_verify_init(&verify_ctx, 0);
+
+	t_cose_sign1_set_verification_key(&verify_ctx, sign_key);
+
+	return_value = t_cose_sign1_verify(&verify_ctx, completed_encode_sign, /* COSE to verify */
+					   &payload, /* Payload from signed_cose */
+					   NULL);    /* Don't return parameters */
+
+	if (return_value != T_COSE_SUCCESS) {
+		log_err_print("failed with %d", return_value);
+	} else {
+		log_info_print("COSE signature verification succeeded");
+	}
+
 #endif
 	return status;
 }

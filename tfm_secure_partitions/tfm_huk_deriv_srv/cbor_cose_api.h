@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -89,6 +89,27 @@ psa_status_t tfm_cose_encode_finish(struct tfm_cose_encode_ctx *me,
  */
 psa_status_t tfm_cose_add_data(struct tfm_cose_encode_ctx *token_ctx, int64_t label, void *data,
 			       size_t data_len);
+
+/**
+ * \brief CBOR encode and sign the encoded inference version and model details using private key of
+ * the given key handle.
+ *
+ * \param[in]   key_handle                Key handle.
+ * \param[in]   tflm_infer_ver            Pointer to the tflm infer version struct which holds
+ *                                        both version and model details.
+ * \param[in]   utvm_infer_ver            Pointer to the utvm infer version struct which holds
+ *                                        both version and model details.
+ * \param[out]  encoded_buf               Buffer to which encoded data *
+ *                                        is written into.
+ * \param[in]   encoded_buf_size          Size of inf_val_encoded_buf in bytes.
+ * \param[out]  encoded_buf_len           Encoded and signed payload len in
+ *                                        bytes.
+ *
+ * \return Returns error code as specified in \ref psa_status_t
+ */
+psa_status_t tfm_cose_enc_aat_sign(psa_key_handle_t key_handle, infer_version_t *tflm_infer_ver,
+				   infer_version_t *utvm_infer_ver, uint8_t *encoded_buf,
+				   size_t encoded_buf_size, size_t *encoded_buf_len);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,7 +13,7 @@
 #include "t_cose_sign1_verify.h"
 
 #include "psa/crypto.h"
-
+#include "tfm_huk_deriv_srv_api.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
