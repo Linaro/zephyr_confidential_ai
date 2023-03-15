@@ -57,6 +57,7 @@ list(APPEND secure_app_files
   ext/NanoCBOR/src/decoder.c
   ext/NanoCBOR/src/encoder.c
   src/device_client_tls_key.c
+  src/tfm_partition_aat.c
 )
 
 if(CONFIG_APP_NETWORKING)
@@ -83,6 +84,7 @@ target_compile_definitions(app PRIVATE
   TFM_PARTITION_HUK_KEY_DERIVATION
   TFM_PARTITION_TFLM_SERVICE
   TFM_PARTITION_UTVM_SERVICE
+  TFM_PARTITION_AAT_SERVICE
   NANOCBOR_BYTEORDER_HEADER=<zephyr/sys/byteorder.h>
   NANOCBOR_BE64TOH_FUNC=sys_be64_to_cpu
   NANOCBOR_HTOBE64_FUNC=sys_cpu_to_be64

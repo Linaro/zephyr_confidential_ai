@@ -71,5 +71,20 @@
          ],
       }
     },
+    {
+      "description": "TF-M AAT (Application attestation token) service",
+      "short_name": "TFM_SP_AAT_SERVICE",
+      "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_aat_service/tfm_aat_service.yaml",
+      "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_aat_service",
+      "tfm_partition_ipc": true,
+      "version_major": 0,
+      "version_minor": 1,
+      "pid": 0x4c690500,
+      "linker_pattern": {
+        "library_list": [
+           "*tfm_*partition_aat.*"
+         ],
+      }
+    },
   ]
 }
