@@ -119,7 +119,7 @@ impl Key {
         // The raw key:
         let key = match pubkey.parsed()? {
             x509_parser::public_key::PublicKey::EC(pt) => {
-                PublicKey::from_sec1_bytes(pt.data()).unwrap()
+                PublicKey::from_sec1_bytes(pt.data())?
             }
             _ => return Err(anyhow!("Cert public key is not EC key")),
         };
@@ -222,7 +222,7 @@ impl Key {
         sec1.extend_from_slice(y.as_slice());
         assert_eq!(sec1.len(), 65);
 
-        let eph_pub = PublicKey::from_sec1_bytes(&sec1).unwrap();
+        let eph_pub = PublicKey::from_sec1_bytes(&sec1)?;
 
         // The algorithm for the context comes from the algorithm wrappin5 data,
         // but isn't the same, as it is only the keywrap algorithm.
@@ -259,7 +259,7 @@ impl Key {
             .unwrap();
 
         // Use this key to build the aead handler for this.
-        let cipher = Aes128Gcm::new_from_slice(&cek).unwrap();
+        let cipher = Aes128Gcm::new_from_slice(&cek)?;
         let nonce = Nonce::from_slice(&packet.unprotected.iv);
 
         let plain = packet
@@ -344,7 +344,7 @@ impl Key {
         };
 
         // Use this to build the aead handler for this.
-        let cipher = Aes128Gcm::new_from_slice(&cek).unwrap();
+        let cipher = Aes128Gcm::new_from_slice(&cek)?;
         let nonce = Nonce::from_slice(&kw_iv);
 
         // Use HKDF to derive the secret from this. From our perspective, this
@@ -441,7 +441,7 @@ impl Key {
 
             let r = GenericArray::clone_from_slice(&sig[0..32]);
             let s = GenericArray::clone_from_slice(&sig[32..64]);
-            let sig = Signature::from_scalars(r, s).unwrap();
+            let sig = Signature::from_scalars(r, s)?;
 
             let pub_key = self.public_key();
             let vkey = VerifyingKey::from(&pub_key);
@@ -464,7 +464,7 @@ impl ContentKey {
     pub fn from_slice(data: &[u8]) -> Result<ContentKey> {
         Ok(ContentKey {
             secret_bytes: data.to_vec(),
-            cipher: Aes128Gcm::new_from_slice(data).unwrap(),
+            cipher: Aes128Gcm::new_from_slice(data)?,
         })
     }
 
@@ -472,7 +472,7 @@ impl ContentKey {
     pub fn new(mut rng: impl CryptoRng + RngCore) -> Result<ContentKey> {
         let mut key = vec![0u8; 16];
         rng.fill_bytes(&mut key);
-        let cipher = Aes128Gcm::new_from_slice(&key).unwrap();
+        let cipher = Aes128Gcm::new_from_slice(&key)?;
         Ok(ContentKey {
             secret_bytes: key,
             cipher,
