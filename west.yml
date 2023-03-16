@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Linaro
+# Copyright (c) 2022-2023 Linaro
 # SPDX-License-Identifier: Apache-2.0
 
 manifest:
@@ -12,5 +12,5 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
-      revision: 45e1ff94cdbc395ab9f87d948580cefd585479c5
+      revision: 9a759025d9123c7871308173a5fa31657a43a179
       import: true
