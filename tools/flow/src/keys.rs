@@ -21,7 +21,8 @@ use p256::{
         Signature, SigningKey, VerifyingKey,
     },
     elliptic_curve::sec1::ToEncodedPoint,
-    PublicKey, SecretKey, pkcs8::DecodePrivateKey,
+    pkcs8::DecodePrivateKey,
+    PublicKey, SecretKey,
 };
 use rand_core::{CryptoRng, RngCore};
 use x509_parser::{parse_x509_certificate, prelude::parse_x509_pem};
@@ -34,7 +35,7 @@ use rand_core::OsRng;
 #[cfg(test)]
 use coset::CoseEncrypt;
 
-use crate::{data::Example, pdump::HexDump, Result, errors::wrap};
+use crate::{data::Example, errors::wrap, pdump::HexDump, Result};
 
 #[derive(Debug)]
 pub struct Key {
@@ -94,7 +95,11 @@ impl Key {
     pub fn from_cert_file<P: AsRef<Path>>(path: P, with_private: bool) -> Result<Key> {
         let path = path.as_ref();
 
-        let secret = if with_private { Some(Self::read_private(path)?) } else { None };
+        let secret = if with_private {
+            Some(Self::read_private(path)?)
+        } else {
+            None
+        };
 
         let cert = std::fs::read(path)?;
         let (rem, pem) = parse_x509_pem(&cert)?;
@@ -118,9 +123,7 @@ impl Key {
 
         // The raw key:
         let key = match pubkey.parsed()? {
-            x509_parser::public_key::PublicKey::EC(pt) => {
-                PublicKey::from_sec1_bytes(pt.data())?
-            }
+            x509_parser::public_key::PublicKey::EC(pt) => PublicKey::from_sec1_bytes(pt.data())?,
             _ => return Err(anyhow!("Cert public key is not EC key")),
         };
 
