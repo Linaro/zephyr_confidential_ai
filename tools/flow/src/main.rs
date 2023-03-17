@@ -2,9 +2,10 @@
 
 use std::{fs::File, io::Write, path::Path};
 
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use coset::{CborSerializable, CoseEncrypt, CoseEncrypt0, CoseSign1};
-use keys::{ContentKey, Key};
+use keys::{tagging, ContentKey, Key};
 // use pdump::HexDump;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
@@ -211,6 +212,7 @@ fn new_session(
         .write(true)
         .create_new(true)
         .open(output_path)?;
+    tagging::encode(&mut outfile, tagging::TAG_SIGN1)?;
     outfile.write_all(&signed)?;
 
     Ok(())
@@ -227,6 +229,7 @@ fn encrypt(input: &str, output: &str, state_path: &str) -> Result<()> {
 
     let encd = key.encrypt(&payload, OsRng)?;
     let mut outfile = File::options().write(true).create_new(true).open(output)?;
+    tagging::encode(&mut outfile, tagging::TAG_ENCRYPT0)?;
     outfile.write_all(&encd)?;
 
     Ok(())
@@ -246,6 +249,10 @@ fn decrypt(
     // Read the session file, which should be a signed message wraping the
     // encrypted payload. TODO: Make these tagged.
     let sess = std::fs::read(session_path)?;
+    let (tag, sess) = tagging::decode(&sess)?;
+    if tag != tagging::TAG_SIGN1 {
+        return Err(anyhow!("Session packet is not COSE_Sign1 tagged."));
+    }
     let packet = wrap(CoseSign1::from_slice(&sess))?;
 
     device.verify(&packet)?;
@@ -259,6 +266,10 @@ fn decrypt(
     let secret = ContentKey::from_slice(&secret)?;
 
     let ctext = std::fs::read(input)?;
+    let (tag, ctext) = tagging::decode(&ctext)?;
+    if tag != tagging::TAG_ENCRYPT0 {
+        return Err(anyhow!("Payload packet is not COSE_Encrypt0 tagged."));
+    }
     let ppacket = wrap(CoseEncrypt0::from_slice(&ctext))?;
     let plain = secret.decrypt(&ppacket)?;
 
