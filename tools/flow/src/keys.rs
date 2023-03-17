@@ -617,3 +617,104 @@ fn encrypt0() {
     let message2 = secret.decrypt(&packet).unwrap();
     assert_eq!(message2, message);
 }
+
+/// CBOR packets can be tagged. However, the ciborium and coset libraries make
+/// using these tags a little awkward, as they need to be added at a lower level
+/// than available. The solution of either converting the entire to/from a Value
+/// is wasteful of memory. Fortunately, CBOR is fairly simple, and we can just
+/// add and check these tags ourselves. This module provides some helpful
+/// functions to make this easier.
+pub mod tagging {
+    use std::io::Write;
+
+    use anyhow::anyhow;
+
+    use crate::Result;
+
+    pub const TAG_SIGN: usize = 98;
+    pub const TAG_SIGN1: usize = 18;
+    pub const TAG_ENCRYPT: usize = 96;
+    pub const TAG_ENCRYPT0: usize = 16;
+
+    const CBOR_TYPE_MASK: u8 = 0xe0;
+    const CBOR_TYPE_TAG: u8 = 6 << 5;
+    const CBOR_SIZE_MASK: u8 = 0x1f;
+
+    /// Decode the CBOR tag at the start of a message, retuning a slice of the
+    /// rest of the packet, and the tag type. If this is not a CBOR tag, will
+    /// return an Error.
+    pub fn decode(buf: &[u8]) -> Result<(usize, &[u8])> {
+        if buf.len() < 1 {
+            return Err(anyhow!("No packet to look for tag"));
+        }
+
+        let first = buf[0];
+        if (first & CBOR_TYPE_MASK) != CBOR_TYPE_TAG {
+            return Err(anyhow!("Packet does not start with CBOR tag"));
+        }
+
+        match first & CBOR_SIZE_MASK {
+            v @ 0..=23 => Ok((v as usize, &buf[1..])),
+            24 => {
+                if buf.len() < 2 {
+                    Err(anyhow!("Tag present, but insuffient data"))
+                } else {
+                    Ok((buf[1] as usize, &buf[2..]))
+                }
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    /// Add an encoded tag to the given writer.
+    pub fn encode<W: Write>(writer: &mut W, tag: usize) -> Result<()> {
+        match tag {
+            tag @ 0..=23 => {
+                let buf = [CBOR_TYPE_TAG | (tag as u8)];
+                writer.write_all(&buf)?;
+            }
+            tag @ 24..=255 => {
+                let buf = [CBOR_TYPE_TAG | 24, tag as u8];
+                writer.write_all(&buf)?;
+            }
+            _ => unimplemented!(),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn tagging() {
+        struct Case {
+            tag: usize,
+            length: usize,
+        }
+        static CASES: [Case; 4] = [
+            Case {
+                tag: TAG_ENCRYPT,
+                length: 2,
+            },
+            Case {
+                tag: TAG_ENCRYPT0,
+                length: 1,
+            },
+            Case {
+                tag: TAG_SIGN,
+                length: 2,
+            },
+            Case {
+                tag: TAG_SIGN1,
+                length: 1,
+            },
+        ];
+        let mut buffer = Vec::new();
+
+        for case in &CASES {
+            buffer.clear();
+            encode(&mut buffer, case.tag).unwrap();
+            assert_eq!(buffer.len(), case.length);
+            let (tag, rest) = decode(&buffer).unwrap();
+            assert_eq!(tag, case.tag);
+            assert!(rest.is_empty());
+        }
+    }
+}
