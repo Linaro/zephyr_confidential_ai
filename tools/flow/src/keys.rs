@@ -405,13 +405,19 @@ impl Key {
     }
 
     /// Sign this payload, using our key.
-    pub fn sign_cose(&self, payload: &[u8], rng: impl CryptoRng + RngCore) -> Result<Vec<u8>> {
+    pub fn sign_cose(
+        &self,
+        payload: &[u8],
+        session_id: &[u8],
+        rng: impl CryptoRng + RngCore,
+    ) -> Result<Vec<u8>> {
         // This signing algorithm doesn't need an rng.
         let _ = rng;
 
         let prot = HeaderBuilder::new()
             .algorithm(iana::Algorithm::ES256)
             .content_type("application/cbor".to_string())
+            .value(-65537, Value::Bytes(session_id.to_vec()))
             .build();
         let unprot = HeaderBuilder::new()
             .key_id(b"keyid-placeholder".to_vec())
@@ -493,7 +499,12 @@ impl ContentKey {
         })
     }
 
-    pub fn encrypt(&self, plain: &[u8], mut rng: impl CryptoRng + RngCore) -> Result<Vec<u8>> {
+    pub fn encrypt(
+        &self,
+        plain: &[u8],
+        session_id: &[u8],
+        mut rng: impl CryptoRng + RngCore,
+    ) -> Result<Vec<u8>> {
         let mut iv = vec![0u8; 12];
         rng.fill_bytes(&mut iv);
         let nonce = Nonce::from_slice(&iv);
@@ -501,6 +512,7 @@ impl ContentKey {
             .protected(
                 HeaderBuilder::new()
                     .algorithm(iana::Algorithm::A128GCM)
+                    .value(-65537, Value::Bytes(session_id.to_vec()))
                     .build(),
             )
             .unprotected(HeaderBuilder::new().iv(iv.clone()).build())
@@ -599,7 +611,7 @@ fn randomsign() {
 
     let message = b"This is a simple message";
 
-    let signed = signer.sign_cose(message, OsRng).unwrap();
+    let signed = signer.sign_cose(message, b"test messageid", OsRng).unwrap();
 
     // Now verify this signature.
     let packet = CoseSign1::from_slice(&signed).unwrap();
@@ -612,7 +624,7 @@ fn encrypt0() {
     let secret = ContentKey::new(OsRng).unwrap();
     let message = b"This is a simple message";
 
-    let encd = secret.encrypt(message, OsRng).unwrap();
+    let encd = secret.encrypt(message, b"Test messageid", OsRng).unwrap();
     // println!("Encd: {:?}", encd);
 
     // Decode the (untagged) packet.

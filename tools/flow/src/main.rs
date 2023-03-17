@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use coset::{CborSerializable, CoseEncrypt, CoseEncrypt0, CoseSign1};
 use keys::{tagging, ContentKey, Key};
 // use pdump::HexDump;
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::wrap;
@@ -185,11 +185,15 @@ fn new_session(
     // Generate a session key, this should be a 16-byte AES key.
     let session = ContentKey::new(OsRng)?;
 
+    // Generate a session ID.
+    let mut session_id = vec![0u8; 16];
+    OsRng.fill_bytes(&mut session_id);
+
     // Make the encrypt0 packet for the service containing this session key.
     let enc = device.encrypt_cose(session.bytes(), &service.public_key(), OsRng)?;
 
     // Then wrap this with COSE_Sign1 for our integrity.
-    let signed = device.sign_cose(&enc, OsRng)?;
+    let signed = device.sign_cose(&enc, &session_id, OsRng)?;
 
     // signed.dump();
 
@@ -198,7 +202,7 @@ fn new_session(
     // to make it automatic.
     let state = SessionState {
         secret: session.bytes().to_vec(),
-        session_id: "session id placeholder".to_string(),
+        session_id: session_id,
     };
     let stfile = File::options()
         .write(true)
@@ -227,7 +231,7 @@ fn encrypt(input: &str, output: &str, state_path: &str) -> Result<()> {
 
     let key = state.content_key()?;
 
-    let encd = key.encrypt(&payload, OsRng)?;
+    let encd = key.encrypt(&payload, &state.session_id, OsRng)?;
     let mut outfile = File::options().write(true).create_new(true).open(output)?;
     tagging::encode(&mut outfile, tagging::TAG_ENCRYPT0)?;
     outfile.write_all(&encd)?;
@@ -257,6 +261,11 @@ fn decrypt(
 
     device.verify(&packet)?;
 
+    // Get the session ID from this packet.
+    let session_session_id =
+        keys::cose_map_get(&packet.protected.header.rest, &coset::Label::Int(-65537))
+            .expect("Packet should have a session_id header.");
+
     // The encrypted data is within this.
     let sess = packet.payload.as_ref().unwrap();
     let packet = wrap(CoseEncrypt::from_slice(&sess))?;
@@ -271,6 +280,18 @@ fn decrypt(
         return Err(anyhow!("Payload packet is not COSE_Encrypt0 tagged."));
     }
     let ppacket = wrap(CoseEncrypt0::from_slice(&ctext))?;
+
+    // Get the session id from the payload and make sure it matches the session packet.
+    let packet_session_id =
+        keys::cose_map_get(&ppacket.protected.header.rest, &coset::Label::Int(-65537))
+            .expect("Encrypted payload should have a session_id header");
+
+    if session_session_id != packet_session_id {
+        return Err(anyhow!(
+            "Session in payload packet does not match session packet"
+        ));
+    }
+
     let plain = secret.decrypt(&ppacket)?;
 
     let mut outfile = File::options().write(true).create_new(true).open(output)?;
@@ -282,7 +303,7 @@ fn decrypt(
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionState {
     secret: Vec<u8>,
-    session_id: String,
+    session_id: Vec<u8>,
 }
 
 impl SessionState {
