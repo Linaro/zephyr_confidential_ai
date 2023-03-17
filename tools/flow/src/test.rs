@@ -4,7 +4,7 @@
 //! valid COSE packets.
 
 use crate::data::Example;
-use crate::keys::{Key, ContentKey};
+use crate::keys::{tagging, ContentKey, Key};
 
 use base64::{engine::general_purpose, Engine};
 use coset::CborSerializable;
@@ -20,10 +20,10 @@ fn check_ecdh_wrap() {
     // we see the right tag.
     // TODO: Try to do this using the cbor library directly, but for now, just check the bytes.
     let packet = &ex.output.cbor;
-    if packet.len() < 3 || packet[0] != 0xd8 || packet[1] != 0x60 {
+    let (tag, packet) = tagging::decode(packet).unwrap();
+    if tag != tagging::TAG_ENCRYPT {
         panic!("CBOR packet is not properly tagged as COSE_Encrypt");
     }
-    let packet = &packet[2..];
     let packet = coset::CoseEncrypt::from_slice(packet).expect("Decoding cbor");
 
     let plain = secret.decrypt_cose(&packet).expect("Unable to decrypt");
@@ -47,10 +47,10 @@ fn check_ecdsa() {
     // TODO: Try to do this using the cbor library directly, but for now, just
     // check the bytes.
     let packet = &ex.output.cbor;
-    if packet.len() < 2 || packet[0] != 0xd2 {
+    let (tag, packet) = tagging::decode(packet).unwrap();
+    if tag != tagging::TAG_SIGN1 {
         panic!("CBOR packet is not properly tagged as COSE_Sign1");
     }
-    let packet = &packet[1..];
     let packet = coset::CoseSign1::from_slice(packet).expect("Decoding cbor");
     // println!("Packet: {:#?}", packet);
 
@@ -73,10 +73,10 @@ fn check_encrypt0() {
     // TODO: Try to do this using the cbor library directly, but for now, just
     // check the bytes.
     let packet = &ex.output.cbor;
-    if packet.len() < 2 || packet[0] != 0xd0 {
+    let (tag, packet) = tagging::decode(packet).unwrap();
+    if tag != tagging::TAG_ENCRYPT0 {
         panic!("CBOR packet is not properly tagged as COSE_Encrypt0");
     }
-    let packet = &packet[1..];
     let packet = coset::CoseEncrypt0::from_slice(packet).expect("Decoding cbor");
     // println!("Packet: {:#?}", packet);
 
