@@ -2,7 +2,6 @@
 
 use std::{fs::File, io::Write, path::Path};
 
-use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use coset::{CborSerializable, CoseEncrypt, CoseEncrypt0, CoseSign1};
 use keys::{tagging, ContentKey, Key};
@@ -10,7 +9,7 @@ use keys::{tagging, ContentKey, Key};
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
-use crate::errors::wrap;
+use crate::errors::{FlowError, wrap};
 
 #[cfg(test)]
 mod test;
@@ -20,7 +19,7 @@ mod errors;
 mod keys;
 mod pdump;
 
-type Result<T> = anyhow::Result<T>;
+type Result<T> = std::result::Result<T, errors::FlowError>;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -255,7 +254,7 @@ fn decrypt(
     let sess = std::fs::read(session_path)?;
     let (tag, sess) = tagging::decode(&sess)?;
     if tag != tagging::TAG_SIGN1 {
-        return Err(anyhow!("Session packet is not COSE_Sign1 tagged."));
+        return Err(FlowError::IncorrectTag("COSE_Sign1"));
     }
     let packet = wrap(CoseSign1::from_slice(&sess))?;
 
@@ -277,7 +276,7 @@ fn decrypt(
     let ctext = std::fs::read(input)?;
     let (tag, ctext) = tagging::decode(&ctext)?;
     if tag != tagging::TAG_ENCRYPT0 {
-        return Err(anyhow!("Payload packet is not COSE_Encrypt0 tagged."));
+        return Err(FlowError::IncorrectTag("COSE_Encrypt0"));
     }
     let ppacket = wrap(CoseEncrypt0::from_slice(&ctext))?;
 
@@ -287,9 +286,7 @@ fn decrypt(
             .expect("Encrypted payload should have a session_id header");
 
     if session_session_id != packet_session_id {
-        return Err(anyhow!(
-            "Session in payload packet does not match session packet"
-        ));
+        return Err(errors::FlowError::SessionMismatch);
     }
 
     let plain = secret.decrypt(&ppacket)?;

@@ -7,7 +7,6 @@ use std::{collections::BTreeMap, path::Path};
 
 use aes_gcm::{aead::generic_array::GenericArray, AeadInPlace, Aes128Gcm, KeyInit, Nonce};
 use aes_kw::{Kek, KekAes128};
-use anyhow::anyhow;
 use base64::{engine::general_purpose, Engine};
 use coset::{
     cbor::value::Value, iana, CborSerializable, CoseEncrypt0, CoseEncrypt0Builder,
@@ -35,7 +34,7 @@ use rand_core::OsRng;
 #[cfg(test)]
 use coset::CoseEncrypt;
 
-use crate::{data::Example, errors::wrap, pdump::HexDump, Result};
+use crate::{data::Example, pdump::HexDump, Result, errors::{FlowError, wrap}};
 
 #[derive(Debug)]
 pub struct Key {
@@ -57,7 +56,7 @@ impl Key {
         let secret = decode_key(key)?;
         let key_id = key
             .get("kid")
-            .ok_or_else(|| anyhow!("Key id (kid) not present"))?;
+            .ok_or_else(|| FlowError::Flow("Key id (kid) not present"))?;
         Ok(Key {
             info: KeyInfo::Secret(secret),
             key_id: key_id.to_string(),
@@ -104,14 +103,14 @@ impl Key {
         let cert = std::fs::read(path)?;
         let (rem, pem) = parse_x509_pem(&cert)?;
         if !rem.is_empty() {
-            return Err(anyhow!("Trailing garbage in certificate file"));
+            return Err(FlowError::Flow("Trailing garbage in certificate file"));
         }
         if pem.label != "CERTIFICATE" {
-            return Err(anyhow!("Certificate file does not contain a CERTIFICATE"));
+            return Err(FlowError::Flow("Certificate file does not contain a CERTIFICATE"));
         }
         let (rest, cert) = parse_x509_certificate(&pem.contents)?;
         if !rest.is_empty() {
-            return Err(anyhow!("Trailing der garbage in certificate file"));
+            return Err(FlowError::Flow("Trailing der garbage in certificate file"));
         }
         // println!("cert: {:?}", cert);
 
@@ -124,7 +123,7 @@ impl Key {
         // The raw key:
         let key = match pubkey.parsed()? {
             x509_parser::public_key::PublicKey::EC(pt) => PublicKey::from_sec1_bytes(pt.data())?,
-            _ => return Err(anyhow!("Cert public key is not EC key")),
+            _ => return Err(FlowError::Flow("Cert public key is not EC key")),
         };
 
         // If we have a private key, ensure that it goes with the public key in
@@ -132,7 +131,7 @@ impl Key {
         match &secret {
             Some(sec) => {
                 if sec.public_key() != key {
-                    return Err(anyhow!("pk8 key does not match public key in certificate"));
+                    return Err(FlowError::Flow("pk8 key does not match public key in certificate"));
                 }
             }
             None => (),
@@ -166,9 +165,9 @@ impl Key {
         // For now, we only support a single recipient. Later, we can search
         // through the recipients to find the one that matches our current key.
         let recipient = match packet.recipients.as_slice() {
-            [] => return Err(anyhow!("No recipients")),
+            [] => return Err(FlowError::Flow("No recipients")),
             [single] => single,
-            _ => return Err(anyhow!("Multiple recipients not yet supported")),
+            _ => return Err(FlowError::Flow("Multiple recipients not yet supported")),
         };
 
         // Ensure that the correct algorithm is encoded.
@@ -176,7 +175,7 @@ impl Key {
             Some(coset::RegisteredLabelWithPrivate::Assigned(iana::Algorithm::ECDH_ES_A128KW)) => {
                 ()
             }
-            _ => return Err(anyhow!("Unsupported algorithm in COSE packet")),
+            _ => return Err(FlowError::Flow("Unsupported algorithm in COSE packet")),
         }
 
         // The key ID of the sender is represented in the unprotected header.
@@ -187,7 +186,7 @@ impl Key {
         // Get the info about the key, for the most part, this match just match
         // specific values.
         let info = match cose_map_get(&recipient.unprotected.rest, &Label::Int(-1)) {
-            None => return Err(anyhow!("No info entry -1 in recipient unprotected header")),
+            None => return Err(FlowError::Flow("No info entry -1 in recipient unprotected header")),
             Some(m) => m,
         };
         let info = info
@@ -197,13 +196,13 @@ impl Key {
         // The key type must be a 2, for "EC2".
         match cbor_map_get(info, &Value::Integer(From::from(1i32))) {
             Some(v) if v == &Value::Integer(From::from(2i32)) => (),
-            _ => return Err(anyhow!("Expecting key to be EC2")),
+            _ => return Err(FlowError::Flow("Expecting key to be EC2")),
         }
 
         // The curve must be P-256.
         match cbor_map_get(info, &Value::Integer(From::from(-1i32))) {
             Some(v) if v == &Value::Integer(From::from(1i32)) => (),
-            _ => return Err(anyhow!("Expecting curve to be P-256")),
+            _ => return Err(FlowError::Flow("Expecting curve to be P-256")),
         }
 
         // The other fields are then the x and y values.
@@ -233,7 +232,10 @@ impl Key {
             Some(RegisteredLabelWithPrivate::Assigned(iana::Algorithm::ECDH_ES_A128KW)) => {
                 iana::Algorithm::A128KW
             }
-            alg => return Err(anyhow!("Unexpected key wrap algorithm: {:?}", alg)),
+            alg => {
+                let msg = format!("{:?}", alg);
+                return Err(FlowError::UnexpectedKeyWrap(msg));
+            }
         };
 
         // Construct the context for the HKDF.
@@ -454,10 +456,7 @@ impl Key {
 
             let pub_key = self.public_key();
             let vkey = VerifyingKey::from(&pub_key);
-            match vkey.verify(data, &sig) {
-                Ok(()) => Ok(()),
-                Err(e) => Err(anyhow::anyhow!("Verification failure: {:?}", e)),
-            }
+            vkey.verify(data, &sig)
         })?;
         Ok(packet.payload.as_ref().unwrap())
     }
@@ -642,9 +641,7 @@ fn encrypt0() {
 pub mod tagging {
     use std::io::Write;
 
-    use anyhow::anyhow;
-
-    use crate::Result;
+    use crate::{Result, errors::FlowError};
 
     pub const TAG_SIGN: usize = 98;
     pub const TAG_SIGN1: usize = 18;
@@ -660,19 +657,19 @@ pub mod tagging {
     /// return an Error.
     pub fn decode(buf: &[u8]) -> Result<(usize, &[u8])> {
         if buf.len() < 1 {
-            return Err(anyhow!("No packet to look for tag"));
+            return Err(FlowError::CoseError("No packet to look for tag"));
         }
 
         let first = buf[0];
         if (first & CBOR_TYPE_MASK) != CBOR_TYPE_TAG {
-            return Err(anyhow!("Packet does not start with CBOR tag"));
+            return Err(FlowError::CoseError("Packet does not start with CBOR tag"));
         }
 
         match first & CBOR_SIZE_MASK {
             v @ 0..=23 => Ok((v as usize, &buf[1..])),
             24 => {
                 if buf.len() < 2 {
-                    Err(anyhow!("Tag present, but insuffient data"))
+                    Err(FlowError::CoseError("Tag present, but insufficient data"))
                 } else {
                     Ok((buf[1] as usize, &buf[2..]))
                 }
