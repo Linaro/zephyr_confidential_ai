@@ -100,6 +100,46 @@ enum Commands {
         #[arg(short = 'c', long)]
         service_cert: String,
     },
+
+    /// A simple encrypt of a piece of payload.
+    SimpleEncrypt {
+        /// File to read the payload from. This is arbitrary data.
+        #[arg(short, long)]
+        input: String,
+
+        /// File to write the generated message to.
+        #[arg(short, long)]
+        output: String,
+
+        /// Device key to use, should be the name of a .crt file. Will look for
+        /// a file with the same basename, and .key or .pk8 for the private key.
+        #[arg(short, long)]
+        device_key: String,
+
+        /// Service certificate to send the message to. Should be the name of a
+        /// .crt file.
+        #[arg(short = 'c', long)]
+        service_cert: String,
+    },
+
+    /// Decrypt a packet encoded with SimpleEncrypt.
+    SimpleDecrypt {
+        /// File containing the encrypted payload.
+        #[arg(short, long)]
+        input: String,
+
+        /// File to write the plaintext to.
+        #[arg(short, long)]
+        output: String,
+
+        /// File containing the device cert.
+        #[arg(short, long)]
+        device_cert: String,
+
+        /// Certificate and key file for the service.
+        #[arg(short = 'c', long)]
+        service_cert: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -145,6 +185,18 @@ fn main() -> Result<()> {
             device_cert,
             service_cert,
         }) => decrypt(input, output, session, device_cert, service_cert),
+        Some(Commands::SimpleEncrypt {
+            input,
+            output,
+            device_key,
+            service_cert,
+        }) => simple_encrypt(device_key, service_cert, input, output),
+        Some(Commands::SimpleDecrypt {
+            input,
+            output,
+            device_cert,
+            service_cert,
+        }) => simple_decrypt(input, output, device_cert, service_cert),
         None => {
             println!("Specify subcommand.  'help' to get list of commands");
             Ok(())
@@ -226,6 +278,39 @@ fn new_session(
     Ok(())
 }
 
+/// Just sign/encrypt a single packet of data.
+fn simple_encrypt(
+    device_key: &str,
+    service_cert: &str,
+    input_path: &str,
+    output_path: &str,
+) -> Result<()> {
+    let service = Key::from_cert_file(service_cert, false)?;
+    let device = Key::from_cert_file(device_key, true)?;
+
+    let plaintext = std::fs::read(input_path)?;
+
+    // Make the encrypt0 packet containing the payload.
+    let enc = device.encrypt_cose(&plaintext, &service, OsRng)?;
+
+    // Wrap this with COSE_Sign1 for our integrity.
+    let signed = device.sign_cose(
+        &enc,
+        b"single",
+        "application/x-linaro-secureai-single",
+        OsRng,
+    )?;
+
+    let mut outfile = File::options()
+        .write(true)
+        .create_new(true)
+        .open(output_path)?;
+    tagging::encode(&mut outfile, tagging::TAG_SIGN1)?;
+    outfile.write_all(&signed)?;
+
+    Ok(())
+}
+
 /// Encrypt payload.
 fn encrypt(input: &str, output: &str, state_path: &str) -> Result<()> {
     let state = SessionState::load(state_path)?;
@@ -295,6 +380,32 @@ fn decrypt(
     }
 
     let plain = secret.decrypt(&ppacket)?;
+
+    let mut outfile = File::options().write(true).create_new(true).open(output)?;
+    outfile.write_all(&plain)?;
+
+    Ok(())
+}
+
+/// Decrypt a simply-encrypted packet.
+fn simple_decrypt(input: &str, output: &str, device_path: &str, service_cert: &str) -> Result<()> {
+    let service = Key::from_cert_file(service_cert, true)?;
+    let device = Key::from_cert_file(device_path, false)?;
+
+    let outer = std::fs::read(input)?;
+    let (tag, outer) = tagging::decode(&outer)?;
+    if tag != tagging::TAG_SIGN1 {
+        return Err(FlowError::IncorrectTag("COSE_Sign1"));
+    }
+    let packet = CoseSign1::from_slice(&outer)?;
+
+    device.verify(&packet)?;
+
+    // The encrypted data is within this.
+    let inner = packet.payload.as_ref().unwrap();
+    let packet = CoseEncrypt::from_slice(&inner)?;
+
+    let plain = service.decrypt_cose(&packet)?;
 
     let mut outfile = File::options().write(true).create_new(true).open(output)?;
     outfile.write_all(&plain)?;
