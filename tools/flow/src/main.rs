@@ -192,7 +192,12 @@ fn new_session(
     let enc = device.encrypt_cose(session.bytes(), &service, OsRng)?;
 
     // Then wrap this with COSE_Sign1 for our integrity.
-    let signed = device.sign_cose(&enc, &session_id, OsRng)?;
+    let signed = device.sign_cose(
+        &enc,
+        &session_id,
+        "application/x-linaro-secureai-session",
+        OsRng,
+    )?;
 
     // signed.dump();
 
