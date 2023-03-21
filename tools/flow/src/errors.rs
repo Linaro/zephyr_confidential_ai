@@ -16,37 +16,18 @@ pub enum FlowError {
     IncorrectTag(&'static str),
     #[error("Error with COSE: {0}")]
     CoseError(&'static str),
-    #[error("IO Error")]
-    Io {
-        #[from]
-        source: std::io::Error,
-        // backtrace: Backtrace,
-    },
-    #[error("Error decoding json: {source:?}")]
-    Json {
-        #[from]
-        source: serde_json::Error,
-    },
-    #[error("X.509 PEM Error")]
-    X509Pem {
-        #[from]
-        source: x509_parser::nom::Err<PEMError>,
-    },
-    #[error("X.509 Parse Error")]
-    X509ParseError {
-        #[from]
-        source: x509_parser::nom::Err<X509Error>,
-    },
-    #[error("X.509 Error")]
-    X509Error {
-        #[from]
-        source: X509Error,
-    },
+    #[error("IO Error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Error decoding json: {0:?}")]
+    Json(#[from] serde_json::Error),
+    #[error("X.509 PEM Error) {0}")]
+    X509Pem(#[from] x509_parser::nom::Err<PEMError>),
+    #[error("X.509 Parse Error: {0}")]
+    X509ParseError(#[from] x509_parser::nom::Err<X509Error>),
+    #[error("X.509 Error: {0}")]
+    X509Error(#[from] X509Error),
     #[error("Elliptic curve error")]
-    EllipticCurveError {
-        #[from]
-        source: p256::elliptic_curve::Error,
-    },
+    EllipticCurveError(#[from] p256::elliptic_curve::Error),
     #[error("Invalid digest length")]
     InvalidDigestLength(#[from] sha2::digest::InvalidLength),
     #[error("Ecdsa Error: {0:?}")]
