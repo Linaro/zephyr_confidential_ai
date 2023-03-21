@@ -434,7 +434,7 @@ impl Key {
             .value(-65537, Value::Bytes(session_id.to_vec()))
             .build();
         let unprot = HeaderBuilder::new()
-            .key_id(b"keyid-placeholder".to_vec())
+            .key_id(self.key_id.clone().into_bytes())
             .build();
 
         let signer = SigningKey::from(self.secret_key().unwrap());
