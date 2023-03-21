@@ -34,7 +34,7 @@ use rand_core::OsRng;
 #[cfg(test)]
 use coset::CoseEncrypt;
 
-use crate::{data::Example, pdump::HexDump, Result, errors::FlowError};
+use crate::{data::Example, errors::FlowError, pdump::HexDump, Result};
 
 #[derive(Debug)]
 pub struct Key {
@@ -106,7 +106,9 @@ impl Key {
             return Err(FlowError::Flow("Trailing garbage in certificate file"));
         }
         if pem.label != "CERTIFICATE" {
-            return Err(FlowError::Flow("Certificate file does not contain a CERTIFICATE"));
+            return Err(FlowError::Flow(
+                "Certificate file does not contain a CERTIFICATE",
+            ));
         }
         let (rest, cert) = parse_x509_certificate(&pem.contents)?;
         if !rest.is_empty() {
@@ -131,7 +133,9 @@ impl Key {
         match &secret {
             Some(sec) => {
                 if sec.public_key() != key {
-                    return Err(FlowError::Flow("pk8 key does not match public key in certificate"));
+                    return Err(FlowError::Flow(
+                        "pk8 key does not match public key in certificate",
+                    ));
                 }
             }
             None => (),
@@ -186,7 +190,11 @@ impl Key {
         // Get the info about the key, for the most part, this match just match
         // specific values.
         let info = match cose_map_get(&recipient.unprotected.rest, &Label::Int(-1)) {
-            None => return Err(FlowError::Flow("No info entry -1 in recipient unprotected header")),
+            None => {
+                return Err(FlowError::Flow(
+                    "No info entry -1 in recipient unprotected header",
+                ))
+            }
             Some(m) => m,
         };
         let info = info
@@ -641,7 +649,7 @@ fn encrypt0() {
 pub mod tagging {
     use std::io::Write;
 
-    use crate::{Result, errors::FlowError};
+    use crate::{errors::FlowError, Result};
 
     pub const TAG_SIGN: usize = 98;
     pub const TAG_SIGN1: usize = 18;
