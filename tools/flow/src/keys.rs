@@ -292,7 +292,7 @@ impl Key {
     pub fn encrypt_cose(
         &self,
         plaintext: &[u8],
-        recipient: &PublicKey,
+        recipient: &Self,
         mut rng: impl RngCore + CryptoRng,
     ) -> Result<Vec<u8>> {
         let mut cek = vec![0u8; 16];
@@ -342,7 +342,7 @@ impl Key {
             (Value::Integer(From::from(-3)), Value::Bytes(eph_y.to_vec())),
         ]);
         let unprot_hd = HeaderBuilder::new()
-            .key_id(b"TODO use real key ID".to_vec())
+            .key_id(recipient.key_id.clone().into_bytes())
             .value(-1, item_map)
             .build();
 
@@ -374,7 +374,10 @@ impl Key {
             .build();
         let ctx = ctxb.to_vec()?;
 
-        let secret = p256::ecdh::diffie_hellman(eph_key.to_nonzero_scalar(), recipient.as_affine());
+        let secret = p256::ecdh::diffie_hellman(
+            eph_key.to_nonzero_scalar(),
+            recipient.public_key().as_affine(),
+        );
         let hkdf = secret.extract::<sha2::Sha256>(None);
         let mut hkey = vec![0u8; 16];
         hkdf.expand(&ctx, &mut hkey).unwrap();
@@ -598,13 +601,11 @@ pub fn cbor_map_get<'a>(map: &'a [(Value, Value)], key: &Value) -> Option<&'a Va
 fn randomkey() {
     let sender = Key::new(OsRng, "sender").unwrap();
     let recip_priv = Key::new(OsRng, "recipient").unwrap();
-    let recip_pub = recip_priv.public_key();
     println!("sender: {:?}", sender);
-    println!("recip: {:?}", recip_pub);
 
     let plain = b"This is some plaintext.";
 
-    let cblock = sender.encrypt_cose(plain, &recip_pub, OsRng).unwrap();
+    let cblock = sender.encrypt_cose(plain, &recip_priv, OsRng).unwrap();
 
     // Decode. This will eventually need to be tagged, but shouldn't be yet.
     let packet = CoseEncrypt::from_slice(&cblock).unwrap();

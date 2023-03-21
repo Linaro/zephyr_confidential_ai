@@ -189,7 +189,7 @@ fn new_session(
     OsRng.fill_bytes(&mut session_id);
 
     // Make the encrypt0 packet for the service containing this session key.
-    let enc = device.encrypt_cose(session.bytes(), &service.public_key(), OsRng)?;
+    let enc = device.encrypt_cose(session.bytes(), &service, OsRng)?;
 
     // Then wrap this with COSE_Sign1 for our integrity.
     let signed = device.sign_cose(&enc, &session_id, OsRng)?;
