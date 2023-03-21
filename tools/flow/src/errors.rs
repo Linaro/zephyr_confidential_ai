@@ -57,13 +57,8 @@ pub enum FlowError {
     CboriumSerError(#[from] ciborium::ser::Error<std::io::Error>),
     #[error("Cborium DE error: {0:?}")]
     CboriumDeError(#[from] ciborium::de::Error<std::io::Error>),
-
-    // Cose error seems rather broken, as far as using it as an error. For now,
-    // we'll just make it into a String.
-    #[error("COSE error {text:?}")]
-    CoseLibError {
-        text: String,
-    },
+    #[error("COSE error {0:?}")]
+    CoseLibError(#[from] CoseError),
 
     #[error("Unexpected keywrap algorithm {0:?}")]
     UnexpectedKeyWrap(String),
@@ -71,18 +66,4 @@ pub enum FlowError {
     // This can be expanded out if these need to be individually detected.
     #[error("Flow error: {0}")]
     Flow(&'static str),
-}
-
-/// The CoseError doesn't seem to want to play with other error types. Convert
-/// from CoseError to a string.
-pub fn wrap<T>(item: std::result::Result<T, CoseError>) -> crate::Result<T> {
-    match item {
-        Ok(t) => Ok(t),
-        Err(e) => {
-            let msg = format!("{:?}", e);
-            Err(FlowError::CoseLibError {
-                text: msg,
-            })
-        }
-    }
 }

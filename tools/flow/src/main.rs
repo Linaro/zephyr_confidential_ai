@@ -9,7 +9,7 @@ use keys::{tagging, ContentKey, Key};
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
-use crate::errors::{FlowError, wrap};
+use crate::errors::FlowError;
 
 #[cfg(test)]
 mod test;
@@ -256,7 +256,7 @@ fn decrypt(
     if tag != tagging::TAG_SIGN1 {
         return Err(FlowError::IncorrectTag("COSE_Sign1"));
     }
-    let packet = wrap(CoseSign1::from_slice(&sess))?;
+    let packet = CoseSign1::from_slice(&sess)?;
 
     device.verify(&packet)?;
 
@@ -267,7 +267,7 @@ fn decrypt(
 
     // The encrypted data is within this.
     let sess = packet.payload.as_ref().unwrap();
-    let packet = wrap(CoseEncrypt::from_slice(&sess))?;
+    let packet = CoseEncrypt::from_slice(&sess)?;
 
     let secret = service.decrypt_cose(&packet)?;
     println!("Secret {:?}", secret);
@@ -278,7 +278,7 @@ fn decrypt(
     if tag != tagging::TAG_ENCRYPT0 {
         return Err(FlowError::IncorrectTag("COSE_Encrypt0"));
     }
-    let ppacket = wrap(CoseEncrypt0::from_slice(&ctext))?;
+    let ppacket = CoseEncrypt0::from_slice(&ctext)?;
 
     // Get the session id from the payload and make sure it matches the session packet.
     let packet_session_id =
