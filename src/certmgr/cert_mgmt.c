@@ -161,11 +161,13 @@ static bool is_device_prov_done(enum km_key_idx key_idx)
 	struct psa_storage_info_t p_info;
 	int ret = psa_ps_get_info(APP_PS_BASE + key_idx, &p_info);
 	if (ret != PSA_SUCCESS) {
-		LOG_INF("Provision is not done for key idx 0x%d", key_idx);
-		LOG_INF("PS storage capacity %d size %d, flage %x\n", p_info.capacity, p_info.size,
+		LOG_INF("No record found in PS for certificate for 0x%d", key_idx);
+		LOG_DBG("PS storage capacity %d size %d, flage %x", p_info.capacity, p_info.size,
 			p_info.flags);
 		return false;
 	} else {
+		LOG_INF("Found existing certificate in PS for key id 0x%d (size %d)", key_idx,
+			p_info.size);
 		if (p_info.size > 0) {
 			struct km_key_context *ctx = km_get_context(key_idx);
 			if (ctx == NULL) {

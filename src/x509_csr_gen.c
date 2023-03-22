@@ -416,8 +416,6 @@ psa_status_t x509_csr_cbor(const enum km_key_idx key_idx,
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
 
-	printf("\nGenerating X.509 CSR for '%s' key:\n", ctx->label);
-
 	/* Generate CSR in DER format */
 	ret = x509_csr_generate(key_idx,
 				csr_cbor,

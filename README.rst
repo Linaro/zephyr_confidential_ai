@@ -73,6 +73,9 @@ Custom secure services are included in the sample in the
 * ``tfm_tflm_service``: TensorFlow Lite Micro inference engine and model
   execution
 * ``tfm_utvm_service``: TVM inference engine and model execution
+* ``tfm_aat_service``: AAT (Application Attestation Token) secure services are
+  in charge of creating AAT tokens that contain TFLM and UTVM version and
+  model information.
 
 These secure services are added to TF-M as part of the secure build process
 that takes place before the NS Zephyr application is built, and are
