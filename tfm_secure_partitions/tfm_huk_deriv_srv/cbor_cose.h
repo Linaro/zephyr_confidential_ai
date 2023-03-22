@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,11 +13,10 @@
 #include "t_cose_sign1_verify.h"
 
 #include "psa/crypto.h"
-
+#include "tfm_huk_deriv_srv_api.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /**
  * The context for encoding inference value.  The caller of
@@ -38,16 +37,16 @@ struct tfm_cose_encode_ctx {
 };
 
 /* Labels for CBOR encoding */
-#define EAT_CBOR_LINARO_RANGE_BASE                     (-80000)
-#define EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE          (EAT_CBOR_LINARO_RANGE_BASE - 0)
-#define EAT_CBOR_LINARO_LABEL_TFLM_VERSION             (EAT_CBOR_LINARO_RANGE_BASE - 1)
-#define EAT_CBOR_LINARO_LABEL_TFLM_SINE_MODEL_VERSION  (EAT_CBOR_LINARO_RANGE_BASE - 2)
-#define EAT_CBOR_LINARO_LABEL_MTVM_VERSION             (EAT_CBOR_LINARO_RANGE_BASE - 3)
-#define EAT_CBOR_LINARO_LABEL_MTVM_SINE_MODEL_VERSION  (EAT_CBOR_LINARO_RANGE_BASE - 4)
+#define EAT_CBOR_LINARO_RANGE_BASE		      (-80000)
+#define EAT_CBOR_LINARO_LABEL_INFERENCE_VALUE	      (EAT_CBOR_LINARO_RANGE_BASE - 0)
+#define EAT_CBOR_LINARO_LABEL_TFLM_VERSION	      (EAT_CBOR_LINARO_RANGE_BASE - 1)
+#define EAT_CBOR_LINARO_LABEL_TFLM_SINE_MODEL_VERSION (EAT_CBOR_LINARO_RANGE_BASE - 2)
+#define EAT_CBOR_LINARO_LABEL_MTVM_VERSION	      (EAT_CBOR_LINARO_RANGE_BASE - 3)
+#define EAT_CBOR_LINARO_LABEL_MTVM_SINE_MODEL_VERSION (EAT_CBOR_LINARO_RANGE_BASE - 4)
 
 #ifdef NV_PS_COUNTERS_SUPPORT
-#define EAT_CBOR_LINARO_NV_COUNTER_ROLL_OVER           (EAT_CBOR_LINARO_RANGE_BASE - 5)
-#define EAT_CBOR_LINARO_NV_COUNTER_VALUE               (EAT_CBOR_LINARO_RANGE_BASE - 6)
+#define EAT_CBOR_LINARO_NV_COUNTER_ROLL_OVER (EAT_CBOR_LINARO_RANGE_BASE - 5)
+#define EAT_CBOR_LINARO_NV_COUNTER_VALUE     (EAT_CBOR_LINARO_RANGE_BASE - 6)
 #endif
 
 #ifdef __cplusplus

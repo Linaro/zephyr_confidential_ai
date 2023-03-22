@@ -73,6 +73,9 @@ Custom secure services are included in the sample in the
 * ``tfm_tflm_service``: TensorFlow Lite Micro inference engine and model
   execution
 * ``tfm_utvm_service``: TVM inference engine and model execution
+* ``tfm_aat_service``: AAT (Application Attestation Token) secure services are
+  in charge of creating AAT tokens that contain TFLM and UTVM version and
+  model information.
 
 These secure services are added to TF-M as part of the secure build process
 that takes place before the NS Zephyr application is built, and are
@@ -159,7 +162,7 @@ assumptions in this codebase are met.
 
 This Zephyr commit hash used is:
 
-- ``45e1ff94cdbc395ab9f87d948580cefd585479c5``
+- ``9a759025d9123c7871308173a5fa31657a43a179``
 
 Run these commands to checkout the expected commit hash, and apply a required
 patch to TF-M, allowing us to enable CPP support in the TF-M build system. This
@@ -170,7 +173,7 @@ allocation for the secure image(s), where required:
 
    $ cd path/to/zephyrproject/zephyr
    $ source zephyr-env.sh
-   $ git checkout 45e1ff94cdbc395ab9f87d948580cefd585479c5
+   $ git checkout 9a759025d9123c7871308173a5fa31657a43a179
    $ west update
    $ cd ../modules/tee/tf-m/trusted-firmware-m
    $ git apply --verbose <zephyr_secure_inference_path>/patch/tfm.patch

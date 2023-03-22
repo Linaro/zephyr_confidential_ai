@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2022 Linaro Limited
+# Copyright (c) 2021-2023 Linaro Limited
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -52,9 +52,9 @@ target_sources(tfm_app_rot_partition_tflm
         ${TFLM_KERNELS_FILES}
         ${TFLM_MICRO_FILES}
         ${TFLM_SCHEMA_FILES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/hello_world/constants.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/hello_world/hello_world_model_data.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/hello_world/main_functions.cc
+        ${CMAKE_CURRENT_LIST_DIR}/hello_world/constants.cc
+        ${CMAKE_CURRENT_LIST_DIR}/hello_world/hello_world_model_data.cc
+        ${CMAKE_CURRENT_LIST_DIR}/hello_world/main_functions.cc
         tfm_tflm_service.c
         tfm_tflm_service_api.c
 )
@@ -62,13 +62,11 @@ target_sources(tfm_app_rot_partition_tflm
 # The generated sources
 target_sources(tfm_app_rot_partition_tflm
     PRIVATE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_tflm_service/auto_generated/intermedia_tfm_tflm_service.c>
+        ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_tflm_service/auto_generated/intermedia_tfm_tflm_service.c
 )
 target_sources(tfm_partitions
     INTERFACE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_tflm_service/auto_generated/load_info_tfm_tflm_service.c>
+        ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_tflm_service/auto_generated/load_info_tfm_tflm_service.c
 )
 
 target_include_directories(tfm_app_rot_partition_tflm
@@ -96,11 +94,13 @@ target_include_directories(tfm_app_rot_partition_tflm
 
 target_link_libraries(tfm_app_rot_partition_tflm
     PRIVATE
-        tfm_secure_api
-        psa_interface
         platform_s
         tfm_sprt
-        tfm_app_rot_partition_huk_deriv
+)
+
+target_link_libraries(tfm_spm
+    PRIVATE
+        tfm_app_rot_partition_tflm
 )
 
 ############################ Partition Defs ####################################

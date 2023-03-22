@@ -1,10 +1,10 @@
 #
-# Copyright (c) 2021-2022 Linaro Limited
+# Copyright (c) 2021-2023 Linaro Limited
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 
-cmake_minimum_required(VERSION 3.13.1)
+cmake_minimum_required(VERSION 3.20.0)
 
 # Disable QEMU emulation of the LSM303DLHC magn for now since it requires a specific QEMU build
 # if((BOARD MATCHES "mps2_an521") OR (BOARD MATCHES "mps3_an547"))
@@ -24,20 +24,15 @@ configure_file(
 set_property(TARGET zephyr_property_target
   APPEND PROPERTY TFM_CMAKE_OPTIONS
   -DTFM_EXTRA_MANIFEST_LIST_FILES=${CMAKE_CURRENT_BINARY_DIR}/tfm_secure_partitions/tfm_manifest_list.yaml
-  -DTFM_EXTRA_PARTITION_PATHS="${CMAKE_CURRENT_LIST_DIR}/tfm_secure_partitions/tfm_huk_deriv_srv\\\;${CMAKE_CURRENT_LIST_DIR}/tfm_secure_partitions/tfm_tflm_service\\\;${CMAKE_CURRENT_LIST_DIR}/tfm_secure_partitions/tfm_utvm_service"
+  -DTFM_EXTRA_PARTITION_PATHS=${CMAKE_CURRENT_LIST_DIR}/tfm_secure_partitions
   )
 
 if(${CONFIG_NV_PS_COUNTERS_SUPPORT})
     set_property(TARGET zephyr_property_target
         APPEND PROPERTY TFM_CMAKE_OPTIONS
-        -DNV_PS_COUNTERS_SUPPORT=ON -DNV_COUNTER_TRACKER_THRESHOLD_LIMIT=${CONFIG_NV_COUNTER_TRACKER_THRESHOLD_LIMIT}
+        -DNV_PS_COUNTERS_SUPPORT=ON -DNV_COUNTER_TRACKER_THRESHOLD_LIMIT=${CONFIG_NV_COUNTER_TRACKER_THRESHOLD_LIMIT} -DTFM_ENABLE_HEAP=ON
         )
 endif()
-
-# set_property(TARGET zephyr_property_target
-#   APPEND_STRING PROPERTY TFM_PARTITION_PATHS
-#   ${PARTITION_PATHS}
-#   )
 
 project(tfm_secure_inference)
 
@@ -62,6 +57,7 @@ list(APPEND secure_app_files
   ext/NanoCBOR/src/decoder.c
   ext/NanoCBOR/src/encoder.c
   src/device_client_tls_key.c
+  src/tfm_partition_aat.c
 )
 
 if(CONFIG_APP_NETWORKING)
@@ -77,10 +73,6 @@ if(CONFIG_APP_NETWORKING)
 endif()
 
 target_sources(app PRIVATE ${secure_app_files})
-#target_sources(app PRIVATE
-#if (CONFIG_APP_NETWORKING)
-#  src/azure.c
-#endif()
 
 target_include_directories(app PRIVATE
   ${ZEPHYR_TRUSTED_FIRMWARE_M_MODULE_DIR}/interface/include
@@ -92,6 +84,7 @@ target_compile_definitions(app PRIVATE
   TFM_PARTITION_HUK_KEY_DERIVATION
   TFM_PARTITION_TFLM_SERVICE
   TFM_PARTITION_UTVM_SERVICE
+  TFM_PARTITION_AAT_SERVICE
   NANOCBOR_BYTEORDER_HEADER=<zephyr/sys/byteorder.h>
   NANOCBOR_BE64TOH_FUNC=sys_be64_to_cpu
   NANOCBOR_HTOBE64_FUNC=sys_cpu_to_be64

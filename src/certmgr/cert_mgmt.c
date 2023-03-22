@@ -161,18 +161,15 @@ static bool is_device_prov_done(enum km_key_idx key_idx)
 	struct psa_storage_info_t p_info;
 	int ret = psa_ps_get_info(APP_PS_BASE + key_idx, &p_info);
 	if (ret != PSA_SUCCESS) {
-		LOG_INF("Provision is not done for key idx 0x%d", key_idx);
-		LOG_INF("PS storage capacity %d size %d, flage %x\n", p_info.capacity, p_info.size,
+		LOG_INF("No record found in PS for certificate for 0x%d", key_idx);
+		LOG_DBG("PS storage capacity %d size %d, flage %x", p_info.capacity, p_info.size,
 			p_info.flags);
 		return false;
 	} else {
+		LOG_INF("Found existing certificate in PS for key id 0x%d (size %d)", key_idx,
+			p_info.size);
 		if (p_info.size > 0) {
-			struct km_key_context *ctx = km_get_context(key_idx);
-			if (ctx == NULL) {
-				LOG_ERR("Unable to get the key context for idx:: %d\n", key_idx);
-				return false;
-			}
-			km_set_key_status(ctx->key_id, KEY_X_509_CERT_GEN);
+			km_set_key_status(key_idx, KEY_X_509_CERT_GEN);
 		}
 	}
 	return true;
@@ -190,7 +187,7 @@ static void cert_mgmt_init()
 
 		if (!is_device_prov_done(key_idx) && ctx->status == KEY_GEN) {
 
-			LOG_INF("Staring provisioning process for 0x%x", ctx->key_id);
+			LOG_INF("Starting provisioning process for 0x%x", ctx->key_id);
 			ret = cert_mgmt_do_prov_cert(ctx->key_id);
 			if (ret != 0) {
 				LOG_ERR("Failed to provision 0x%x\n", ctx->key_id);
@@ -210,7 +207,7 @@ static void cert_mgmt_init()
 void cert_mgmt_thread(void)
 {
 	/* Wait for the network interface to be up. */
-	LOG_INF("Cert mgmt: waiting for network...");
+	LOG_INF("waiting for network...");
 	await_dhcp();
 	while (true) {
 		if (is_sntp_init_done()) {

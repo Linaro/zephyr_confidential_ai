@@ -1,67 +1,91 @@
+From ba6ed512dde91bc9f11c04859d15ad32579a7896 Mon Sep 17 00:00:00 2001
+From: Rajkumar Kanagaraj <rajkumar.kanagaraj@linaro.org>
+Date: Thu, 16 Mar 2023 10:02:40 +0000
+Subject: [PATCH] C++ support and enable heap support
+
+Signed-off-by: Rajkumar Kanagaraj <rajkumar.kanagaraj@linaro.org>
+---
+ CMakeLists.txt                                       |  2 +-
+ cmake/disable_compiler_detection.cmake               |  1 +
+ platform/CMakeLists.txt                              |  2 +-
+ platform/ext/common/gcc/tfm_common_s.ld              |  2 --
+ .../target/stm/b_u585i_iot02a/include/flash_layout.h |  2 +-
+ toolchain_GNUARM.cmake                               | 12 +++++++++++-
+ 6 files changed, 15 insertions(+), 6 deletions(-)
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 896153aab..ac45eb04e 100644
+index 380168b60..e8ac06720 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -53,7 +53,7 @@ endif()
+@@ -43,7 +43,7 @@ endif()
  include(${TFM_TOOLCHAIN_FILE})
  set(CMAKE_PROJECT_INCLUDE_BEFORE ${CMAKE_SOURCE_DIR}/cmake/disable_compiler_detection.cmake)
-
+ 
 -project("Trusted Firmware M" VERSION ${TFM_VERSION} LANGUAGES C ASM)
 +project("Trusted Firmware M" VERSION ${TFM_VERSION} LANGUAGES C CXX ASM)
  tfm_toolchain_reload_compiler()
-
+ 
  # Synchronise the install path variables. If CMAKE_INSTALL_PREFIX is manually
 diff --git a/cmake/disable_compiler_detection.cmake b/cmake/disable_compiler_detection.cmake
 index ebafca063..215221a20 100644
 --- a/cmake/disable_compiler_detection.cmake
 +++ b/cmake/disable_compiler_detection.cmake
 @@ -7,3 +7,4 @@
-
+ 
  #Stop cmake running compiler tests.
  set (CMAKE_C_COMPILER_FORCED true)
 +set (CMAKE_CXX_COMPILER_FORCED true)
+diff --git a/platform/CMakeLists.txt b/platform/CMakeLists.txt
+index 055e1f59e..f2a788adb 100755
+--- a/platform/CMakeLists.txt
++++ b/platform/CMakeLists.txt
+@@ -291,7 +291,7 @@ target_compile_definitions(platform_region_defs
+         $<$<STREQUAL:${MCUBOOT_EXECUTION_SLOT},2>:LINK_TO_SECONDARY_PARTITION>
+         $<$<BOOL:${TEST_PSA_API}>:PSA_API_TEST_${TEST_PSA_API}>
+         $<$<BOOL:${TFM_CODE_SHARING}>:CODE_SHARING>
+-        $<$<OR:$<CONFIG:Debug>,$<CONFIG:relwithdebinfo>>:ENABLE_HEAP>
++        $<$<OR:$<BOOL:${TFM_ENABLE_HEAP}>,$<CONFIG:Debug>,$<CONFIG:relwithdebinfo>>:ENABLE_HEAP>
+         PLATFORM_NS_NV_COUNTERS=${TFM_NS_NV_COUNTER_AMOUNT}
+ )
+ 
 diff --git a/platform/ext/common/gcc/tfm_common_s.ld b/platform/ext/common/gcc/tfm_common_s.ld
-index 9d40da22d..d76401418 100644
+index 29561d714..b0ea044fc 100644
 --- a/platform/ext/common/gcc/tfm_common_s.ld
 +++ b/platform/ext/common/gcc/tfm_common_s.ld
-@@ -196,7 +196,7 @@ SECTIONS
+@@ -194,7 +194,6 @@ SECTIONS
      Image$$ER_CODE_SRAM$$Limit = ADDR(.ER_CODE_SRAM) + SIZEOF(.ER_CODE_SRAM);
  #endif
-
+ 
 -#if TFM_LVL != 1
-+/* #if TFM_LVL != 1 */
      .ARM.extab :
      {
          *(.ARM.extab* .gnu.linkonce.armextab.*)
-@@ -209,7 +209,7 @@ SECTIONS
+@@ -207,7 +206,6 @@ SECTIONS
      } > FLASH
      __exidx_end = .;
-
+ 
 -#endif /* TFM_LVL != 1 */
-+/* #endif */ /* TFM_LVL != 1 */
-
+ 
      .ER_TFM_CODE : ALIGN(4)
      {
 diff --git a/platform/ext/target/stm/b_u585i_iot02a/include/flash_layout.h b/platform/ext/target/stm/b_u585i_iot02a/include/flash_layout.h
-index 7f817c650..30b26c790 100644
+index ffbd2651a..b317f21cf 100644
 --- a/platform/ext/target/stm/b_u585i_iot02a/include/flash_layout.h
 +++ b/platform/ext/target/stm/b_u585i_iot02a/include/flash_layout.h
-@@ -119,8 +119,8 @@
- #error "FLASH_ITS_AREA_OFFSET not aligned on FLASH_AREA_IMAGE_SECTOR_SIZE"
+@@ -124,7 +124,7 @@
  #endif /*  (FLASH_ITS_AREA_OFFSET % FLASH_AREA_IMAGE_SECTOR_SIZE) != 0 */
-
--#define FLASH_S_PARTITION_SIZE          (0x40000) /* 256 KB for S partition */
+ 
+ #define FLASH_S_PARTITION_SIZE          (0x60000) /* 384 KB for S partition */
 -#define FLASH_NS_PARTITION_SIZE         (0x80000) /* 512 KB for NS partition */
-+#define FLASH_S_PARTITION_SIZE          (0x60000) /* 384 KB for S partition */
 +#define FLASH_NS_PARTITION_SIZE         (0x60000) /* 384 KB for NS partition */
-
+ 
  #define FLASH_PARTITION_SIZE            (FLASH_S_PARTITION_SIZE+FLASH_NS_PARTITION_SIZE)
-
-diff --git a/platform/ext/target/stm/common/stm32u5xx/Device/Source/gcc/tfm_common_s.ld b/platform/ext/target/stm/common/stm32u5xx/Device/Source/gcc/tfm_common_s.ld
-index 82ea1c60..28b0e570 100644
+ 
+diff --git a/toolchain_GNUARM.cmake b/toolchain_GNUARM.cmake
+index 758e34593..358034d2c 100644
 --- a/toolchain_GNUARM.cmake
 +++ b/toolchain_GNUARM.cmake
-@@ -20,6 +20,10 @@ if(CMAKE_C_COMPILER STREQUAL "CMAKE_C_COMPILER-NOTFOUND")
+@@ -14,6 +14,10 @@ if(CMAKE_C_COMPILER STREQUAL "CMAKE_C_COMPILER-NOTFOUND")
      message(FATAL_ERROR "Could not find compiler: '${CROSS_COMPILE}-gcc'")
  endif()
  
@@ -72,7 +96,7 @@ index 82ea1c60..28b0e570 100644
  set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
  
  set(LINKER_VENEER_OUTPUT_FLAG -Wl,--cmse-implib,--out-implib=)
-@@ -49,11 +53,15 @@ macro(tfm_toolchain_reset_compiler_flags)
+@@ -48,11 +52,15 @@ macro(tfm_toolchain_reset_compiler_flags)
          -funsigned-char
          -mthumb
          -nostdlib
@@ -89,15 +113,15 @@ index 82ea1c60..28b0e570 100644
  endmacro()
  
  if(CONFIG_TFM_MEMORY_USAGE_QUIET)
-@@ -141,6 +149,7 @@ macro(tfm_toolchain_reload_compiler)
+@@ -168,6 +176,7 @@ macro(tfm_toolchain_reload_compiler)
      endif()
  
      unset(CMAKE_C_FLAGS_INIT)
 +    unset(CMAKE_CXX_FLAGS_INIT)
      unset(CMAKE_ASM_FLAGS_INIT)
  
-     if (DEFINED TFM_SYSTEM_PROCESSOR)
-@@ -156,6 +165,7 @@ macro(tfm_toolchain_reload_compiler)
+     if (CMAKE_SYSTEM_PROCESSOR)
+@@ -183,6 +192,7 @@ macro(tfm_toolchain_reload_compiler)
      endif()
  
      set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_INIT})
@@ -105,3 +129,6 @@ index 82ea1c60..28b0e570 100644
      set(CMAKE_ASM_FLAGS ${CMAKE_ASM_FLAGS_INIT})
  
      set(BL2_COMPILER_CP_FLAG -mfloat-abi=soft)
+-- 
+2.34.1
+

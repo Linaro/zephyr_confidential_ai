@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2022 Linaro Limited
+# Copyright (c) 2021-2023 Linaro Limited
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -32,7 +32,6 @@ list(APPEND tfm_huk_service_files
     tfm_huk_deriv_srv.c
     tfm_huk_deriv_srv_api.c
     cbor_cose.c
-    aat.c
 )
 
 target_sources(tfm_app_rot_partition_huk_deriv
@@ -43,27 +42,27 @@ target_sources(tfm_app_rot_partition_huk_deriv
 # The generated sources
 target_sources(tfm_app_rot_partition_huk_deriv
     PRIVATE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_huk_deriv_srv/auto_generated/intermedia_tfm_huk_deriv_srv.c>
+       ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_huk_deriv_srv/auto_generated/intermedia_tfm_huk_deriv_srv.c
 )
 target_sources(tfm_partitions
     INTERFACE
-        $<$<BOOL:${TFM_PSA_API}>:
-            ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_huk_deriv_srv/auto_generated/load_info_tfm_huk_deriv_srv.c>
+       ${CMAKE_BINARY_DIR}/tfm_secure_partitions/tfm_huk_deriv_srv/auto_generated/load_info_tfm_huk_deriv_srv.c
 )
 
 target_link_libraries(tfm_app_rot_partition_huk_deriv
     PRIVATE
-        tfm_secure_api
-        secure_fw
         platform_s
         tfm_sprt
-        tfm_psa_rot_partition_crypto
 )
 
 target_link_libraries(tfm_app_rot_partition_huk_deriv
     PUBLIC
         tfm_t_cose_s
+)
+
+target_link_libraries(tfm_spm
+    PRIVATE
+        tfm_app_rot_partition_huk_deriv
 )
 
 target_link_libraries(tfm_partitions

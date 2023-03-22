@@ -1,18 +1,18 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2018-2022, Linaro. All rights reserved.
+# Copyright (c) 2018-2023, Linaro. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 #-------------------------------------------------------------------------------
 
 {
-  "name": "TF-M secure partition manifests",
+  "description": "TF-M secure partition manifests",
   "type": "manifest_list",
   "version_major": 0,
   "version_minor": 1,
   "manifest_list": [
     {
-      "name": "TF-M HUK Key Derivation",
+      "description": "TF-M HUK Key Derivation",
       "short_name": "TFM_SP_HUK_DERI",
       "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_huk_deriv_srv/tfm_huk_deriv_srv.yaml",
       "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_huk_deriv_srv",
@@ -27,7 +27,7 @@
       }
     },
     {
-      "name": "TFLM Service",
+      "description": "TFLM Service",
       "short_name": "TFM_SP_TFLM_SERVICE",
       "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_tflm_service/tfm_tflm_service.yaml",
       "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_tflm_service",
@@ -42,7 +42,7 @@
       }
     },
     {
-      "name": "UTVM Service",
+      "description": "UTVM Service",
       "short_name": "TFM_SP_UTVM_SERVICE",
       "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_utvm_service/tfm_utvm_service.yaml",
       "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_utvm_service",
@@ -57,7 +57,7 @@
       }
     },
     {
-      "name": "Test Helper Service",
+      "description": "Test Helper Service",
       "short_name": "TFM_SP_TEST_HELPER_SERVICE",
       "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_test_helper_service/tfm_test_helper_service.yaml",
       "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_test_helper_service",
@@ -68,6 +68,21 @@
       "linker_pattern": {
         "library_list": [
            "*tfm_*partition_test_helper.*"
+         ],
+      }
+    },
+    {
+      "description": "TF-M AAT (Application attestation token) service",
+      "short_name": "TFM_SP_AAT_SERVICE",
+      "manifest": "@APP_SOURCE_DIR@/tfm_secure_partitions/tfm_aat_service/tfm_aat_service.yaml",
+      "output_path": "@TFM_BINARY_DIR@/tfm_secure_partitions/tfm_aat_service",
+      "tfm_partition_ipc": true,
+      "version_major": 0,
+      "version_minor": 1,
+      "pid": 0x4c690500,
+      "linker_pattern": {
+        "library_list": [
+           "*tfm_*partition_aat.*"
          ],
       }
     },
