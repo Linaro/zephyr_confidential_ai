@@ -32,16 +32,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// does testing things
-    Test {
-        /// lists test values
-        #[arg(short, long)]
-        list: bool,
-    },
-
-    /// Generate keys to use
-    Gen,
-
     /// Create a new session.
     NewSession {
         /// Device key to use, should be the name of a .crt file. Will look for
@@ -152,15 +142,6 @@ fn main() -> Result<()> {
     }
 
     match &cli.command {
-        Some(Commands::Test { list }) => {
-            if *list {
-                println!("Printing testing lists...");
-            } else {
-                println!("Not printing testing lists...");
-            }
-            Ok(())
-        }
-        Some(Commands::Gen) => gen(),
         Some(Commands::NewSession {
             device_key,
             service_cert,
@@ -202,24 +183,6 @@ fn main() -> Result<()> {
             Ok(())
         }
     }
-}
-
-/// Generate a new set of keys.
-fn gen() -> Result<()> {
-    unimplemented!()
-    // let conf = config::HardCodedConfig;
-
-    // let certdir = conf.cert_dir();
-    // if certdir.exists() {
-    // error!("key directory {:?} alread exists, remove to create new", certdir);
-    // return Err(anyhow!("Command error"));
-    // }
-    // fs::create_dir(&certdir)?;
-
-    // let rng = SystemRandom::new();
-    // let cert = keys::Cert::new(&rng)?;
-    // cert.save(&conf)?;
-    // Ok(())
 }
 
 /// Create a new session.
