@@ -16,9 +16,9 @@ need to be converted to pkcs8 to be usable by flow.  This can be done
 with:
 
 ```
-$ openssl pkcs8 -in certs/devuuid.key -inform PEM \
-        -out certs/devuuid.pk8 -topk8 -nocrypt
-$ openssl pkcs8 -in certs/stuff.key -inform PEM -out certs/stuff.pk8 -topk8 -nocrypt
+$ openssl pkcs8 -in certs/device.key -inform PEM \
+        -out certs/device.pk8 -topk8 -nocrypt
+$ openssl pkcs8 -in certs/cloud1.key -inform PEM -out certs/cloud1.pk8 -topk8 -nocrypt
 ```
 
 ## Encrypted flow
