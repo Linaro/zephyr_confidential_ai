@@ -4,6 +4,30 @@ Flow doesn't try to recreate the key creation parts of what
 `lite_bootstrap_server` does, so we will start by using the scripts from that
 tool to create the service key as well as the device keys.
 
+There are two ways to setup the keys for flow. You can use the
+`lite_bootstrap_server` to create the keys and certificates, or you can use a
+small script with the tool that creates simple self-signed certificates that are
+sufficient for flow.
+
+## Simple self-signed certs
+
+The `./create-certs.sh` script will create device and cloud1 certificates that
+will allow the commands below to demonstrate the flow. These certificates will
+be self signed, and not verified or correlated to any other keys. This makes it
+easy to quickly test with flow.
+
+```
+$ ./create-certs.sh
+```
+
+## Using the `lite_bootstrap_server`
+
+If you already have the `lite_bootstrap_server` running, it maybe easiest to
+just use keys that it has created. At the time of writing, this tool was only
+able to create device certificates. However, since flow doesn't really care
+about the details of the certificate, the cloud service can be faked by just
+creating another device key for it.
+
 The `setup-ca.sh` can be used to create the CA.cert file.  We will
 need to create key for the service, which can be created as if it were
 an ordinary device:
