@@ -453,6 +453,7 @@ Step 2:
 
 .. code-block:: console
 
+   $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -rdu  
    $ ./STM32_Programmer_CLI -c port=/dev/ttyACM0 -ob rdp=0xDC
 
 Step 3:
