@@ -162,7 +162,7 @@ assumptions in this codebase are met.
 
 This Zephyr commit hash used is:
 
-- ``9a759025d9123c7871308173a5fa31657a43a179``
+- ``183e0f854b83de58e7565b297d2af95e52e6a54c``
 
 Run these commands to checkout the expected commit hash, and apply a required
 patch to TF-M, allowing us to enable CPP support in the TF-M build system. This
@@ -173,7 +173,7 @@ allocation for the secure image(s), where required:
 
    $ cd path/to/zephyrproject/zephyr
    $ source zephyr-env.sh
-   $ git checkout 9a759025d9123c7871308173a5fa31657a43a179
+   $ git checkout 183e0f854b83de58e7565b297d2af95e52e6a54c
    $ west update
    $ cd ../modules/tee/tf-m/trusted-firmware-m
    $ git apply --verbose <zephyr_secure_inference_path>/patch/tfm.patch
