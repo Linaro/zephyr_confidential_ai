@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Linaro Limited
+ * Copyright (c) 2021-2023 Linaro Limited
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,7 +16,7 @@
 /** Declare a reference to the application logging interface. */
 LOG_MODULE_DECLARE(app, CONFIG_LOG_DEFAULT_LEVEL);
 
-void main(void)
+int main(void)
 {
 	psa_status_t status;
 	unsigned char uuid[37];
@@ -40,6 +40,7 @@ void main(void)
 	status = al_psa_status(km_get_uuid(uuid, sizeof(uuid)), __func__);
 	if (status != PSA_SUCCESS) {
 		LOG_ERR("Unable to read UUID.");
-		return;
 	}
+
+	return status;
 }
